@@ -13,3 +13,5 @@ webcpp.targets native wasip2 wasip3 emscripten ;
 # The guide's programs, each shown on the page with the output it prints.
 webcpp.example idna_punycode.cpp ;
 webcpp.example idna_validity.cpp ;
+webcpp.example idna_quick_start.cpp ;
+webcpp.example idna_allocation.cpp ;

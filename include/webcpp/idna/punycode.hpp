@@ -353,11 +353,17 @@ namespace punycode {
 /**
  Encodes code points as Punycode into a string of the given memory resource.
 
+ Nothing bounds the input's length, and the encoding's time grows with its
+ square, since RFC 3492's encoder passes over the input once for each
+ distinct code point: a program bounds the length of input it does not trust,
+ as `to_ascii` bounds a label at 256 code points.
+
  @param input The code points to encode.
  @param resource Where the string's memory comes from.
  @return The Punycode, or the error the span form returns but
  @ref error::output_too_small.
  @see "Allocation", in the guide.
+ @see "Limits", in the guide.
 */
 [[nodiscard]] inline result<std::pmr::string> encode(
     std::u32string_view input,
@@ -376,11 +382,17 @@ namespace punycode {
 /**
  Decodes Punycode into a string of code points of the given memory resource.
 
+ Nothing bounds the input's length, and the decoding's time grows with its
+ square, since RFC 3492's decoder inserts each code point among those before
+ it: a program bounds the length of input it does not trust, as `to_unicode`
+ bounds a label at 256 code points.
+
  @param input The Punycode to decode.
  @param resource Where the string's memory comes from.
  @return The code points, or the error the span form returns but
  @ref error::output_too_small.
  @see "Allocation", in the guide.
+ @see "Limits", in the guide.
 */
 [[nodiscard]] inline result<std::pmr::u32string> decode(
     std::string_view input,

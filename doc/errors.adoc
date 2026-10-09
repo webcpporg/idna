@@ -35,7 +35,7 @@ lists them, IDNA2008's last.
 | 11 | `contexto` | RFC 5892 A.3 to A.9 | code point outside its allowed context
 | 12 | `bidi` | IdnaTestV2 B1 to B6: RFC 5893 section 2 | Bidi rule violated
 | 13 | `invalid_punycode` | RFC 3492 decoding; UTS 46 P4; an A-label not in its canonical form | invalid Punycode
-| 14 | `punycode_overflow` | RFC 3492 section 6.4; UTS 46 A3 | Punycode overflow
+| 14 | `punycode_overflow` | RFC 3492 section 6.4; UTS 46 A3; a label's Punycode past the conversions' bound of 256 code points (<<idna-limits-punycode>>) | Punycode overflow
 | 15 | `empty_label` | UTS 46 A4_2 and X4_2 | empty label
 | 16 | `label_too_long` | UTS 46 A4_2: more than 63 octets | label longer than 63 octets
 | 17 | `domain_too_long` | UTS 46 A4_1: more than 253 octets | domain name longer than 253 octets

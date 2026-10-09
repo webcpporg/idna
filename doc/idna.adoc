@@ -40,6 +40,8 @@ include::errors.adoc[]
 
 include::allocation.adoc[]
 
+include::limits.adoc[]
+
 include::unicode.adoc[]
 
 include::testing.adoc[]

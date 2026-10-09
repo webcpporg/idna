@@ -10,7 +10,7 @@
 The labels of a domain name were ASCII: letters, digits and the hyphen. An
 internationalized domain name lets a label hold any script, `bücher.example`
 or `παράδειγμα.δοκιμή`, and still reach the DNS, which stays ASCII: a label
-that is not ASCII travels as an A-label, `xn--` followed by the label's code
+that is not ASCII travels as an A-label, `+xn--+` followed by the label's code
 points in Punycode, so `bücher.example` is looked up as
 `+xn--bcher-kva.example+`.
 
@@ -34,6 +34,30 @@ JSON Schema's `idn-hostname` format asks for, and what no UTS 46 library
 measured against that format's tests gives alone: each accepts the labels
 IDNA2008 refuses. `idna::options{.idna2008 = false}` is UTS 46 alone.
 
+[#idna-introduction-first]
+=== A first example
+
+This program converts two names to their ASCII form, and an A-label back to
+its Unicode form, with the default options:
+
+[source]
+----
+include::{examples}/idna_quick_start.cpp[tag=program,indent=0]
+----
+
+It prints:
+
+[listing]
+----
+include::{examples}/idna_quick_start.expected[]
+----
+
+`Bücher.Example` is mapped first, its capitals lowered, so it is valid, and
+its first label, which is not ASCII, becomes an A-label. `a·b.example` is
+refused: U+00B7 MIDDLE DOT is valid in IDNA2008 only between two `l`, a
+CONTEXTO rule that UTS 46 alone does not have. `to_unicode` decodes the
+A-label back, and reports no error.
+
 [#idna-introduction-headers]
 === Headers
 
@@ -55,6 +79,9 @@ namespace `webcpp::idna`, and Punycode's in `webcpp::idna::punycode`:
 
 | `<webcpp/idna/validity.hpp>`
 | `check_label`, `check_domain` and their `is_valid_` forms (<<idna-validity>>).
+
+| `<webcpp/idna/uts46.hpp>`
+| `to_ascii` and `to_unicode` (<<idna-converting>>).
 |===
 
 [#idna-requirements]

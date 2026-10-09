@@ -50,4 +50,6 @@ are, case included, as RFC 3492's mixed-case annotation leaves them, and
 delimiter, since nothing precedes it, so `-9uc` is refused, as RFC 3492
 says: it is the A-label `+xn---9uc+`, which a careless decoder would read as
 `+xn--9uc+`. Each function has a second form that returns a `std::pmr` string
-from a memory resource (<<idna-allocation>>).
+from a memory resource (<<idna-allocation>>). Neither form bounds the length
+of its input, and the time of both grows with its square, so a program
+bounds input it does not trust (<<idna-limits-punycode>>).

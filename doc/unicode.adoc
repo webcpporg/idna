@@ -102,14 +102,14 @@ b2 libs/idna/test//update-generated
 === What the tables cost
 
 Only `<webcpp/idna/detail/properties.hpp>` includes the tables, and of the
-public headers only `uts46.hpp` and `validity.hpp`, and `<webcpp/idna.hpp>`,
-which includes them, will reach it: `punycode.hpp`, `errors.hpp` and
+public headers only `uts46.hpp` and `validity.hpp` reach it, with
+`<webcpp/idna.hpp>`, which includes them: `punycode.hpp`, `errors.hpp` and
 `options.hpp` cost nothing of them. The tables hold 147,324 bytes of data,
 and a program links only those it reads. A translation unit that includes
-`properties.hpp` and looks up a code point compiles in 0.3 s natively at
-`-O2` with Apple Clang 21, into an object of 74 KB; the tables it reads, the
-UTS 46 status and the Bidi_Class, are 73 KB of that object, and add about
-73 KB to a wasm32-wasip2 program built at `-O2`.
+`<webcpp/idna.hpp>` and calls `to_ascii`, compiled at `-O2`, takes about
+0.9 s of processor time and makes an object of 188 KB natively with Apple
+Clang 21, and about 1.2 s and 197 KB for wasm32-wasip2 with wasi-sdk 34,
+against 0.2 s and 0.1 s, and under 1 KB, for the same program without idna.
 
 [#idna-unicode-moving]
 === Moving to another version of Unicode

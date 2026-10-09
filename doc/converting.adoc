@@ -7,6 +7,76 @@
 [#idna-converting]
 == Converting names
 
+`idna::to_ascii` and `idna::to_unicode` are UTS 46's ToASCII and ToUnicode,
+sections 4.2 and 4.3: the name is mapped, normalized to NFC, split into
+labels at each full stop, and each label is converted and checked. The first
+example (<<idna-introduction-first>>) calls both. Each has two forms: one
+that writes into the caller's span and allocates nothing, and one that
+returns a string from a memory resource (<<idna-allocation>>).
+
+[#idna-converting-processing]
+=== The processing
+
+Each code point is looked up in UTS 46's mapping table: a code point that is
+`valid` stays, one that is `mapped` is replaced by its mapping (`A` by `a`,
+`ﬁ` by `fi`, U+3002 IDEOGRAPHIC FULL STOP by `.`), one that is `ignored` is
+removed (U+00AD SOFT HYPHEN), a `deviation` stays unless the processing is
+transitional (`ß`, `ς`, and the two joiners), and one that is `disallowed`
+stays, to be refused when its label is checked. The result is normalized to
+NFC and split at U+002E. A label that starts with `+xn--+` is decoded from
+Punycode and checked as the U-label it holds; any other is checked as it is.
+The checks, in their order, are those of <<idna-validity-rules>>.
+
+idna does this one label at a time, in a working storage of one label's code
+points, so a name of any length needs the same small storage
+(<<idna-limits>>).
+
+[#idna-converting-to-ascii]
+=== To ASCII
+
+`to_ascii(output, domain, opts)` writes the ASCII form of `domain` into the
+caller's span and returns the number of chars written: each label that is not
+ASCII as `+xn--+` and its Punycode, the others as they are, joined by `.`. A
+name that fails any check has no ASCII form: the result is the first error
+found, in the order of the labels, then `bidi` for the Bidi rule across the
+labels, then `domain_too_long`, and `output_too_small` last, so a span too
+small for a name that is too long anyway reports the name. With the DNS
+lengths verified, the default, the ASCII form is at most
+`idna::max_domain_length`, 253 chars, so a `std::array<char,
+idna::max_domain_length>` always holds it.
+
+`to_ascii(domain, opts, resource)` returns the same ASCII form as a
+`std::pmr::string`. With the DNS lengths verified, it reports the same first
+error as the span form, for every name: a label that outgrows the span form's
+working storage is too long for the DNS anyway, and both forms refuse it
+there (<<idna-limits-storage>>).
+
+[#idna-converting-to-unicode]
+=== To Unicode
+
+`to_unicode(output, domain, opts)` writes the Unicode form, in UTF-8, and
+returns an `idna::unicode_result`: how many chars it wrote, and the first
+error. As UTS 46 asks, the conversion goes on after an error, so that a name
+can be shown even when it is not valid: each label is written as the
+processing leaves it, mapped and normalized, an A-label decoded when its
+Punycode decodes and kept as it is otherwise. A label that fails its checks
+is written so too, as the toUnicode column of IdnaTestV2 records it, and no
+U+FFFD is put in place of what failed: `+A_B.Example+` is written
+`+a_b.example+`, with `not_ldh`. With the DNS lengths verified, a final empty
+label, the DNS root of `example.`, is no error in the Unicode form, as UTS
+46's X4_2 allows; any other empty label is `empty_label`. When the span is
+full, the writing stops at a code point boundary and the error is
+`output_too_small`, which takes the place of any other: the caller needs a
+larger span before anything else. Input that is not well-formed UTF-8 writes
+nothing, and is `invalid_utf8`.
+
+`to_unicode(domain, opts, resource)` returns an `idna::unicode_string`, the
+Unicode form as a `std::pmr::string` and the first error. It is never
+`output_too_small`, and the two forms differ only past the working storage,
+which the Unicode form, having no length to check, meets with the default
+options: the span form stops at a label beyond it, and the pmr form converts
+the label (<<idna-limits-storage>>).
+
 [#idna-converting-options]
 === Options
 
@@ -26,7 +96,7 @@ any length through.
 | CheckHyphens
 | true
 | No hyphen in both the third and the fourth position of a label (V2), none
-  at either end (V3). When false, only a label that starts with `xn--` is
+  at either end (V3). When false, only a label that starts with `+xn--+` is
   refused (V4).
 
 | `check_bidi`
@@ -62,7 +132,7 @@ any length through.
 | `ignore_invalid_punycode`
 | IgnoreInvalidPunycode
 | false
-| A label that starts with `xn--` and does not decode is kept as it is,
+| A label that starts with `+xn--+` and does not decode is kept as it is,
   without an error.
 
 | `idna2008`

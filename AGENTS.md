@@ -58,8 +58,8 @@ one.
 
 Each `@see "<title>"` of a Doc Comment names a top-level section of the page:
 "Introduction", "Punycode", "Converting names", "Validity", "Errors",
-"Allocation", "Testing". Renaming a section renames its `@see` lines in the
-same commit; doc-check fails otherwise.
+"Allocation", "Limits", "Testing". Renaming a section renames its `@see`
+lines in the same commit; doc-check fails otherwise.
 
 An A-label in the page's prose is written as literal monospace,
 `` `+xn--bcher-kva.example+` ``: Asciidoctor replaces `--` between two word

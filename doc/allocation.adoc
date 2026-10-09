@@ -16,8 +16,44 @@ what it does allocate comes from. Every conversion has two forms:
 * *A pmr form* returns a `std::pmr::string` or `std::pmr::u32string` from
   the `std::pmr::memory_resource` it is given, by default
   `std::pmr::get_default_resource()`. It allocates from that resource alone:
-  its result, and a label's working storage beyond the inline capacity.
+  its result, and a label's working storage beyond the inline capacity
+  (<<idna-limits>>).
+
+The span form of `to_ascii` needs no more than a buffer on the stack:
+
+[source]
+----
+include::{examples}/idna_allocation.cpp[tag=span,indent=0]
+----
+
+Its pmr form, here with a `std::pmr::monotonic_buffer_resource` over a
+buffer of the program's own, which allocates nothing from the heap either:
+
+[source]
+----
+include::{examples}/idna_allocation.cpp[tag=pmr,indent=0]
+----
+
+The two forms of `to_ascii` differ for a label longer than the inline
+storage, which only a program that turns the DNS lengths off can give it:
+the span form refuses it, and the pmr form holds it in its resource.
+`to_unicode`, which checks no length, meets such a label with the default
+options too (<<idna-limits-storage>>).
+
+[source]
+----
+include::{examples}/idna_allocation.cpp[tag=long_label,indent=0]
+----
+
+The program prints:
+
+[listing]
+----
+include::{examples}/idna_allocation.expected[]
+----
 
 The test `allocation` replaces the global `operator new` for itself alone
-and counts: no call across the span forms, over every kind of input, and in
-the pmr forms, exactly the calls of their memory resource.
+and counts: no call in any span form or validator, over long names, long
+labels and every kind of failure, with the strict profile, UTS 46 alone and
+the DNS lengths off, and in the pmr forms, exactly the calls of their memory
+resource.
