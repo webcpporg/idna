@@ -26,3 +26,4 @@ webcpp.compile config_developer_defined : config_test.cpp
 
 webcpp.run errors : errors_test.cpp ;
 webcpp.run options : options_test.cpp ;
+webcpp.run properties : properties_test.cpp ;

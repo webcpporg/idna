@@ -65,3 +65,21 @@ An A-label in the page's prose is written as literal monospace,
 `` `+xn--bcher-kva.example+` ``: Asciidoctor replaces `--` between two word
 characters with an em dash, inside backticks too, and no check of the build
 sees it in the rendered page. `xn--` alone, followed by a backtick, is safe.
+
+## The tables
+
+`include/webcpp/idna/detail/tables.hpp` is generated: never edit it by hand.
+`tools/generate_tables.py` writes it from the Unicode files that
+`tools/unicode.json` pins by URL and SHA-256, run from the superproject's
+root:
+
+```bash
+python3 libs/idna/tools/generate_tables.py
+```
+
+It downloads a missing file into `bin/unicode/<version>/` (`--cache <dir>`
+names another place), stops on a digest that differs from the pin, and
+checks what the library assumes of the data before it writes anything (its
+docstring lists the checks). Two runs write the same bytes. The packing of
+each array is stated in the Doc Comment above it, in the generated file, and
+`detail/properties.hpp` holds the only code that reads it.

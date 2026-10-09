@@ -1,0 +1,55 @@
+{
+    "version": "17.0.0",
+    "files": [
+        {
+            "path": "idna/IdnaMappingTable.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/idna/IdnaMappingTable.txt",
+            "sha256": "87f05505dc026fdb2bff16132bdc68a8014675836882a9a2b1844540ad3be382"
+        },
+        {
+            "path": "idna/IdnaTestV2.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/idna/IdnaTestV2.txt",
+            "sha256": "beb5d0be20e896189b03209a82fdc34f06351502bbd4b8e2523583fc2954d9cf"
+        },
+        {
+            "path": "ucd/UnicodeData.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt",
+            "sha256": "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
+        },
+        {
+            "path": "ucd/extracted/DerivedBidiClass.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/extracted/DerivedBidiClass.txt",
+            "sha256": "4867b4b7f0731ed1bfcd34cc6251211ff1542541fce0734b6fbda139ee80b3a4"
+        },
+        {
+            "path": "ucd/extracted/DerivedJoiningType.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/extracted/DerivedJoiningType.txt",
+            "sha256": "f39ebe974825d6736aee15582250307aa532b2cfab3caf3f86bd23fddc9c5c4d"
+        },
+        {
+            "path": "ucd/extracted/DerivedCombiningClass.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/extracted/DerivedCombiningClass.txt",
+            "sha256": "191463abfbd202703c6fd6776a92a23ac44ec65e0476a7f95aa91ca492cef29b"
+        },
+        {
+            "path": "ucd/DerivedNormalizationProps.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/DerivedNormalizationProps.txt",
+            "sha256": "71fd6a206a2c0cdd41feb6b7f656aa31091db45e9cedc926985d718397f9e488"
+        },
+        {
+            "path": "ucd/Scripts.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/Scripts.txt",
+            "sha256": "9f5e50d3abaee7d6ce09480f325c706f485ae3240912527e651954d2d6b035bf"
+        },
+        {
+            "path": "ucd/NormalizationTest.txt",
+            "url": "https://www.unicode.org/Public/17.0.0/ucd/NormalizationTest.txt",
+            "sha256": "5019ffd530751a741900c849c0e010332f142a3612234639bd200b82138a87db"
+        },
+        {
+            "path": "iana/idna-tables-properties.csv",
+            "url": "https://www.iana.org/assignments/idna-tables-12.0.0/idna-tables-properties.csv",
+            "sha256": "160b72e33a377a84253393c572dc338879f39b93beccbb9cb9baebbf4d6dd743"
+        }
+    ]
+}
