@@ -9,6 +9,7 @@
 // their memory resource allocates.
 
 #include <webcpp/idna/punycode.hpp>
+#include <webcpp/idna/validity.hpp>
 
 #include <boost/config.hpp>
 #include <boost/core/lightweight_test.hpp>
@@ -183,7 +184,9 @@ std::array<std::u32string, 4> encoder_inputs() {
 }
 
 /**
- Every span form over every input: the number of results that succeeded.
+ Every span form and validator over every input, with the strict profile, UTS 46 alone and no DNS
+ lengths, and the Punycode encoder over every code point input: the number of results that
+ succeeded.
 
  Tip: the count is checked, so no optimizer may drop a call whose result nothing reads.
 */
@@ -192,8 +195,16 @@ std::size_t exercise_span_forms(const std::array<std::string, 14>& inputs,
     std::array<char, 1024> out{};
     std::array<char32_t, 1024> code_points{};
     std::size_t succeeded = 0;
-    for (const std::string& input : inputs) {
-        succeeded += idna::punycode::decode(code_points, input).has_value() ? 1 : 0;
+    for (const idna::options& opts : {
+             idna::options(),
+             idna::options{.idna2008 = false},
+             idna::options{.verify_dns_length = false},
+         }) {
+        for (const std::string& input : inputs) {
+            succeeded += idna::is_valid_domain(input, opts) ? 1 : 0;
+            succeeded += idna::is_valid_label(input, opts) ? 1 : 0;
+            succeeded += idna::punycode::decode(code_points, input).has_value() ? 1 : 0;
+        }
     }
     for (const std::u32string& input : encoded) {
         succeeded += idna::punycode::encode(out, input).has_value() ? 1 : 0;
@@ -201,7 +212,7 @@ std::size_t exercise_span_forms(const std::array<std::string, 14>& inputs,
     return succeeded;
 }
 
-/** The span forms allocate nothing, whatever the input. */
+/** The span forms and the validators allocate nothing, whatever the input. */
 void span_forms_allocate_nothing() {
     const std::array<std::string, 14> inputs = hostile_inputs();
     const std::array<std::u32string, 4> encoded = encoder_inputs();

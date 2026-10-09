@@ -18,5 +18,6 @@
 #include <webcpp/idna/errors.hpp>
 #include <webcpp/idna/options.hpp>
 #include <webcpp/idna/punycode.hpp>
+#include <webcpp/idna/validity.hpp>
 
 #endif  // WEBCPP_IDNA_HPP

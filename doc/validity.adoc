@@ -1,0 +1,58 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#idna-validity]
+== Validity
+
+`idna::check_label` and `idna::check_domain` say whether a label, or a
+domain name, is valid as it is given, by IDNA2008's rules and UTS 46's
+validity criteria, without UTS 46's mapping: nothing is lowercased,
+normalized or replaced, so a label with a capital letter, or one not in NFC,
+is refused. They are the checks a program needs when a name must already be
+in its final form, as a hostname's A-labels must. `is_valid_label` and
+`is_valid_domain` say the same as a `bool`.
+
+[#idna-validity-rules]
+=== The rules
+
+A label is checked in this order, and the first rule it breaks is its error;
+`to_ascii` and `to_unicode` apply the same rules to each label after the
+mapping, with the NFC check only for a decoded A-label:
+
+. *Normalization Form C* (UTS 46 V1, RFC 5891 section 5.4): `not_nfc`.
+. *Hyphens*, under `check_hyphens`: none in both the third and the fourth
+  position (V2), `hyphen_in_third_and_fourth`, which keeps such labels free
+  for a future prefix, `+xn--+` among them; none at either end (V3),
+  `hyphen_at_start_or_end`. Without `check_hyphens`, a label that starts with
+  `+xn--+` (V4), `ace_prefix`.
+. *No leading combining mark* (V6, RFC 5891 section 5.4):
+  `leading_combining_mark`.
+. *UTS 46's status* (V7): every code point valid, or a deviation in
+  nontransitional processing; `disallowed`.
+. *STD3 ASCII*, under `use_std3_ascii_rules` (U1): ASCII only `a` to `z`,
+  `0` to `9` and the hyphen; `not_ldh`.
+. *CONTEXTJ*, under `check_joiners` (RFC 5892 A.1, A.2): U+200C after a
+  virama, or between a code point of Joining_Type L or D and one of R or D,
+  with only T between; U+200D after a virama; `contextj`.
+. *IDNA2008*, under `idna2008`: no code point UTS 46 marks NV8 or XV8,
+  `not_idna2008`; then the CONTEXTO rules, `contexto`: U+00B7 MIDDLE DOT
+  between two `l` (A.3), U+0375 GREEK KERAIA before a Greek code point
+  (A.4), U+05F3 and U+05F4, GERESH and GERSHAYIM, after a Hebrew one (A.5,
+  A.6), U+30FB KATAKANA MIDDLE DOT in a label that holds Hiragana, Katakana
+  or Han (A.7), and Arabic-Indic digits never beside extended ones (A.8,
+  A.9).
+
+Across the labels of a name, under `check_bidi`: when one label holds an R,
+AL or AN code point, the name is a Bidi domain name, and then every label
+must satisfy RFC 5893 section 2, `bidi`. `0a.א` fails: its first label
+starts with a digit, which rule 1 refuses in a Bidi domain name. Last, under
+`verify_dns_length`, the lengths of the ASCII form: `empty_label`,
+`label_too_long` and `domain_too_long`.
+
+idna derives IDNA2008's property of a code point from UTS 46's table: PVALID,
+CONTEXTJ or CONTEXTO exactly when its status is valid or deviation and it
+bears no NV8 or XV8 mark. The generator checks this against IANA's
+IDNA2008 tables each time it runs (<<idna-unicode>>).

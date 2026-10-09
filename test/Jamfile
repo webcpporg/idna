@@ -47,6 +47,9 @@ webcpp.run nfc : nfc_test.cpp : <toolset>msvc:<cxxflags>/bigobj ;
 webcpp.run context : context_test.cpp ;
 webcpp.run bidi : bidi_test.cpp ;
 
+webcpp.run process : process_test.cpp ;
+webcpp.run validity : validity_test.cpp ;
+
 webcpp.run allocation : allocation_test.cpp ;
 
 # The own lane tables: the generator runs again from the pinned Unicode

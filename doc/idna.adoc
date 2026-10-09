@@ -34,6 +34,8 @@ include::punycode.adoc[]
 
 include::converting.adoc[]
 
+include::validity.adoc[]
+
 include::errors.adoc[]
 
 include::allocation.adoc[]
