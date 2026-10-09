@@ -1,0 +1,94 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#idna-unicode]
+== Unicode and the tables
+
+idna's tables follow Unicode {unicode-version}, `idna::unicode_version`, and UTS 46
+revision 35 for it. They are generated from Unicode's data files into
+`<webcpp/idna/detail/tables.hpp>` as `constexpr` arrays in read-only data: no
+table is built at run time, none is compressed, nothing is allocated and
+nothing is shared mutable state, so any number of threads may call idna at
+once. Each property is a sorted list of runs, looked up by binary search.
+
+[cols="2,3,3",options="header"]
+|===
+| Table | From | Used by
+
+| UTS 46 status, NV8 and XV8 mark, mapping
+| `idna/IdnaMappingTable.txt`
+| the mapping, V7, IDNA2008's property
+
+| Bidi_Class
+| `ucd/extracted/DerivedBidiClass.txt`
+| RFC 5893
+
+| Joining_Type
+| `ucd/extracted/DerivedJoiningType.txt`
+| RFC 5892 A.1
+
+| Canonical_Combining_Class
+| `ucd/extracted/DerivedCombiningClass.txt`
+| NFC, and the virama of A.1 and A.2
+
+| General_Category Mark
+| `ucd/UnicodeData.txt`
+| V6
+
+| Script: Greek, Hebrew, Hiragana, Katakana, Han
+| `ucd/Scripts.txt`
+| RFC 5892 A.4 to A.7
+
+| canonical decompositions, primary composites, NFC_Quick_Check
+| `ucd/UnicodeData.txt`, `ucd/DerivedNormalizationProps.txt`
+| NFC
+|===
+
+Hangul syllables are decomposed and composed by the arithmetic of Unicode
+section 3.12, and take no table.
+
+[#idna-unicode-generator]
+=== The generator
+
+`tools/generate_tables.py`, in idna's repository, writes the tables. Its
+inputs are pinned in
+`tools/unicode.json`, each by its URL under
+`https://www.unicode.org/Public/{unicode-version}/` and its SHA-256, with IANA's
+IDNA2008 tables, `idna-tables-12.0.0`, read only by its checks. A file its
+cache lacks is downloaded, every file is hashed, and a digest that differs
+stops it, naming the file and both digests, before it writes anything.
+
+Before it writes, it checks what idna assumes of the data, and stops naming
+the assumption that fails: every status of the mapping table is one of the
+five it knows; IANA's IDNA2008 property of every code point IANA assigns one
+agrees with the derivation from UTS 46's table, U+002E FULL STOP aside, which
+IANA disallows and UTS 46 keeps as the separator no label holds; the
+CONTEXTJ and CONTEXTO code points are those of RFC 5892 appendix A; and no
+canonical decomposition is longer than 4 code points. Two runs write the same
+bytes. Its cache is `bin/unicode/{unicode-version}/` of the superproject,
+which it fills from unicode.org and iana.org when a file is missing. The data
+are Unicode's, under the Unicode License v3, whose notice is the appendix
+<<idna-unicode-data>>.
+
+[#idna-unicode-compile]
+=== What the tables cost
+
+Only `<webcpp/idna/detail/properties.hpp>` includes the tables, and of the
+public headers only `uts46.hpp` and `validity.hpp` will reach it:
+`punycode.hpp`, `errors.hpp` and `options.hpp` cost nothing of them. The
+tables hold 147,324 bytes of data, and a program links only those it reads.
+A translation unit that includes `properties.hpp` and looks up a code point
+compiles in 0.3 s natively at `-O2` with Apple Clang 21, and the tables it
+reads, the UTS 46 status and the Bidi_Class, add about 73 KB to a
+wasm32-wasip2 program built at `-O2`.
+
+[#idna-unicode-moving]
+=== Moving to another version of Unicode
+
+One change of its own: the version, URLs and digests of `tools/unicode.json`
+and `idna::unicode_version` move together, the generator writes the tables
+and the vectors again, every lane runs, the known failures are brought up to
+date, each with its reason, and the changelog says so.
