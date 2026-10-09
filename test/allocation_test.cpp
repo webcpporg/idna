@@ -6,7 +6,7 @@
 
 // Tests what idna allocates, by counting every call of the global operator new this program makes:
 // nothing in the span forms and the validators, whatever the input, and in the pmr forms only what
-// their memory resource allocates.
+// their memory resource allocates: the page's guarantee 1, idna-invariant-1.
 
 #include <webcpp/idna.hpp>
 

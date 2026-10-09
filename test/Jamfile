@@ -13,6 +13,8 @@ project : requirements <library>/webcpp/idna//idna
 
 import webcpp ;
 
+# Every test runs on every target with the same vectors, which is how the
+# page's guarantee 3 (idna-invariant-3) is checked.
 webcpp.targets native wasip2 wasip3 emscripten ;
 
 webcpp.headers-alone idna : ../include ;
@@ -55,7 +57,8 @@ webcpp.run allocation : allocation_test.cpp ;
 
 # The own lane tables: the generator runs again from the pinned Unicode
 # files, downloading those its cache lacks, and every output is compared
-# with the committed file. The ordinary lanes never run it.
+# with the committed file, the page's guarantee 5 (idna-invariant-5). The
+# ordinary lanes never run it.
 webcpp.generated tables : ../tools/generate_tables.py
   : : ../include/webcpp/idna/detail/tables.hpp generated/idna_test_v2.ipp
       generated/nfc_test.ipp ;

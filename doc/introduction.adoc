@@ -17,22 +17,22 @@ points in Punycode, so `bücher.example` is looked up as
 Two standards say which labels are valid, and how a name a person typed
 becomes one:
 
-* *IDNA2008*, RFC 5890 to 5893, defines a valid label: the property of each
+* *IDNA2008*, RFC{nbsp}5890 to 5893, defines a valid label: the property of each
   code point, derived from Unicode (PVALID; CONTEXTJ and CONTEXTO, valid in
   a context the RFC states; DISALLOWED), Normalization Form C, the hyphens,
   and the Bidi rule of a name that mixes right-to-left and left-to-right
   labels. It maps nothing: `bücher` is a valid label, and `Bücher` is not.
-* *UTS 46*, Unicode's IDNA Compatibility Processing, first maps what was
+* *UTS{nbsp}46*, Unicode's IDNA Compatibility Processing, first maps what was
   typed (case, compatibility forms, the full stops of other scripts), then
   normalizes it, then checks it, by rules close to IDNA2008's but not the
   same: it accepts symbols such as `¡`, which IDNA2008 disallows, and has no
   CONTEXTO rules at all.
 
 idna implements both, and its default profile is the stricter union of the
-two: UTS 46's mapping, then IDNA2008's validity on top of UTS 46's. It is what
-JSON Schema's `idn-hostname` format asks for, and what no UTS 46 library
+two: UTS{nbsp}46's mapping, then IDNA2008's validity on top of UTS{nbsp}46's. It is what
+JSON Schema's `idn-hostname` format asks for, and what no UTS{nbsp}46 library
 measured against that format's tests gives alone: each accepts the labels
-IDNA2008 refuses. `idna::options{.idna2008 = false}` is UTS 46 alone.
+IDNA2008 refuses. `idna::options{.idna2008 = false}` is UTS{nbsp}46 alone.
 
 [#idna-introduction-first]
 === A first example
@@ -55,7 +55,7 @@ include::{examples}/idna_quick_start.expected[]
 `Bücher.Example` is mapped first, its capitals lowered, so it is valid, and
 its first label, which is not ASCII, becomes an A-label. `a·b.example` is
 refused: U+00B7 MIDDLE DOT is valid in IDNA2008 only between two `l`, a
-CONTEXTO rule that UTS 46 alone does not have. `to_unicode` decodes the
+CONTEXTO rule that UTS{nbsp}46 alone does not have. `to_unicode` decodes the
 A-label back, and reports no error.
 
 [#idna-introduction-headers]

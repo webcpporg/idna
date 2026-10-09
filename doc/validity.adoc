@@ -8,8 +8,8 @@
 == Validity
 
 `idna::check_label` and `idna::check_domain` say whether a label, or a
-domain name, is valid as it is given, by IDNA2008's rules and UTS 46's
-validity criteria, without UTS 46's mapping: nothing is lowercased,
+domain name, is valid as it is given, by IDNA2008's rules and UTS{nbsp}46's
+validity criteria, without UTS{nbsp}46's mapping: nothing is lowercased,
 normalized or replaced, so a label with a capital letter, or one not in NFC,
 is refused. The one exception is an A-label, whose case does not matter
 (below). They are the checks a program needs when a name must already be in
@@ -21,12 +21,12 @@ its final form, as a hostname's A-labels must. `is_valid_label` and
 include::{examples}/idna_validity.cpp[tag=labels,indent=0]
 ----
 
-An A-label's `+xn--+` and Punycode are read in either case, as RFC 5890
+An A-label's `+xn--+` and Punycode are read in either case, as RFC{nbsp}5890
 compares them. The label must be ASCII, and its Punycode must decode to a
-label that holds a code point beyond ASCII (UTS 46's P4). Its U-label is
+label that holds a code point beyond ASCII (UTS{nbsp}46's P4). Its U-label is
 then checked by the rules below, Normalization Form C included, and encoded
 again: an A-label that is not the encoding of its U-label, its letters
-compared in lowercase, is refused, as RFC 5891 section 5.4 asks. Each
+compared in lowercase, is refused, as RFC{nbsp}5891 section 5.4 asks. Each
 failure of the A-label itself, a code point beyond ASCII, Punycode that does
 not decode, P4 or the round trip, is `invalid_punycode`, or
 `punycode_overflow` for a number past 32 bits. Under `ignore_invalid_punycode`, a label whose Punycode does not
@@ -35,7 +35,7 @@ decode is kept as it is, and only its length is checked.
 `check_label` refuses a U+002E inside its label as `disallowed`, and applies
 the Bidi rule to its label as to a name of one label. `check_domain` splits
 at U+002E alone: the other full stops, U+3002, U+FF0E and U+FF61, separate
-labels only after UTS 46's mapping, so as given they are code points UTS 46
+labels only after UTS{nbsp}46's mapping, so as given they are code points UTS{nbsp}46
 maps, and `disallowed`. It applies the Bidi rule across the labels, and adds
 the length of the whole name:
 
@@ -44,7 +44,7 @@ the length of the whole name:
 include::{examples}/idna_validity.cpp[tag=domains,indent=0]
 ----
 
-The same check under UTS 46 alone accepts what IDNA2008's context rules
+The same check under UTS{nbsp}46 alone accepts what IDNA2008's context rules
 refuse:
 
 [source]
@@ -66,22 +66,22 @@ A label is checked in this order, and the first rule it breaks is its error;
 `to_ascii` and `to_unicode` apply the same rules to each label after the
 mapping, with the NFC check only for a decoded A-label:
 
-. *Normalization Form C* (UTS 46 V1, RFC 5891 section 5.4): `not_nfc`.
+. *Normalization Form C* (UTS{nbsp}46 V1, RFC{nbsp}5891 section 5.4): `not_nfc`.
 . *Hyphens*, under `check_hyphens`: none in both the third and the fourth
   position (V2), `hyphen_in_third_and_fourth`, which keeps such labels free
   for a future prefix, `+xn--+` among them; none at either end (V3),
   `hyphen_at_start_or_end`. Without `check_hyphens`, a label that starts with
   `+xn--+` (V4), `ace_prefix`.
-. *No leading combining mark* (V6, RFC 5891 section 5.4):
+. *No leading combining mark* (V6, RFC{nbsp}5891 section 5.4):
   `leading_combining_mark`.
-. *UTS 46's status* (V7): every code point valid, or a deviation in
+. *UTS{nbsp}46's status* (V7): every code point valid, or a deviation in
   nontransitional processing; `disallowed`.
 . *STD3 ASCII*, under `use_std3_ascii_rules` (U1): ASCII only `a` to `z`,
   `0` to `9` and the hyphen; `not_ldh`.
-. *CONTEXTJ*, under `check_joiners` (RFC 5892 A.1, A.2): U+200C after a
+. *CONTEXTJ*, under `check_joiners` (RFC{nbsp}5892 A.1, A.2): U+200C after a
   virama, or between a code point of Joining_Type L or D and one of R or D,
   with only T between; U+200D after a virama; `contextj`.
-. *IDNA2008*, under `idna2008`: no code point UTS 46 marks NV8 or XV8,
+. *IDNA2008*, under `idna2008`: no code point UTS{nbsp}46 marks NV8 or XV8,
   `not_idna2008`; then the CONTEXTO rules, `contexto`: U+00B7 MIDDLE DOT
   between two `l` (A.3), U+0375 GREEK KERAIA before a Greek code point
   (A.4), U+05F3 and U+05F4, GERESH and GERSHAYIM, after a Hebrew one (A.5,
@@ -91,7 +91,7 @@ mapping, with the NFC check only for a decoded A-label:
 
 Across the labels of a name, under `check_bidi`: when one label holds an R,
 AL or AN code point, the name is a Bidi domain name, and then every label
-must satisfy RFC 5893 section 2, `bidi`. `0a.א` fails: its first label
+must satisfy RFC{nbsp}5893 section 2, `bidi`. `0a.א` fails: its first label
 starts with a digit, which rule 1 refuses in a Bidi domain name. Under
 `verify_dns_length`, the lengths of the ASCII form: each label's with the
 label, an empty one as `empty_label` and, after its rules, one of more than
@@ -101,7 +101,7 @@ points, which no label within the DNS lengths does, is refused as soon as it
 does, before its rules: `label_too_long` under `verify_dns_length`,
 `storage_exhausted` without it (<<idna-errors>>).
 
-idna derives IDNA2008's property of a code point from UTS 46's table: PVALID,
+idna derives IDNA2008's property of a code point from UTS{nbsp}46's table: PVALID,
 CONTEXTJ or CONTEXTO exactly when its status is valid or deviation and it
 bears no NV8 or XV8 mark. The generator checks this against IANA's
 IDNA2008 tables each time it runs (<<idna-unicode>>).

@@ -17,6 +17,11 @@ namespace idna = webcpp::idna;
 
 namespace {
 
+// The message into a caller's buffer throws nothing; the one that returns a std::string allocates
+// it from the heap, and may throw what operator new throws (idna-invariant-2).
+static_assert(noexcept(idna::error_category().message(0, nullptr, 0)));
+static_assert(!noexcept(idna::error_category().message(0)));
+
 /** Every enumerator with its fixed value and its message, as the guide's table spells them. */
 constexpr auto spellings = std::to_array<std::pair<idna::error, std::string_view>>({
     {idna::error::invalid_utf8, "invalid UTF-8"},

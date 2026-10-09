@@ -28,16 +28,16 @@ and every test runs on every target.
   aggregate, the DNS lengths and the version of Unicode.
 
 | `utf8`
-| Strict UTF-8: the boundaries of every row of RFC 3629's table of
+| Strict UTF-8: the boundaries of every row of RFC{nbsp}3629's table of
   well-formed sequences, decoded and encoded back, every kind of ill-formed
   one, and the end of the text.
 
 | `punycode`
-| RFC 3492 section 7.1's samples, (A) to (S), both ways, and inputs that
+| RFC{nbsp}3492 section 7.1's samples, (A) to (S), both ways, and inputs that
   tell apart what the samples leave alike in the bias; digits in either case
   and the mixed-case annotation kept; a leading delimiter, a bad digit, a
   number cut short, a value out of Unicode or a surrogate; each overflow of
-  RFC 3492 section 6.4, in the decoder and the encoder; `output_too_small` at
+  RFC{nbsp}3492 section 6.4, in the decoder and the encoder; `output_too_small` at
   every length below the result's; the pmr forms.
 
 | `properties`
@@ -63,7 +63,7 @@ and every test runs on every target.
   text as long without one, which an insertion sort exceeds by far.
 
 | `context`, `bidi`
-| Each rule of RFC 5892 appendix A and of RFC 5893 section 2, satisfied and
+| Each rule of RFC{nbsp}5892 appendix A and of RFC{nbsp}5893 section 2, satisfied and
   broken, the joining scripts a hand-written list misses among them, and
   A.7 to A.9 over labels of thousands of code points in less than 1,000 times
   the time of a label as long without a CONTEXTO code point.
@@ -80,7 +80,7 @@ and every test runs on every target.
 | `validity`
 | `check_label` and `check_domain`: every rule with its error, and of two
   broken rules the earlier; the strings of the JSON Schema suite's
-  `idn-hostname` that UTS 46 alone accepts, as U-labels and as A-labels;
+  `idn-hostname` that UTS{nbsp}46 alone accepts, as U-labels and as A-labels;
   A-labels in either case, not ASCII, decoding to ASCII, and labels that
   only look like one; the lengths at 63 and 64, 253 and 254; the inline
   storage's limit; the first error of a name with several; a name of 65,536
@@ -92,7 +92,7 @@ and every test runs on every target.
 
 | `uts46`
 | All {n-idna-test-v2} lines of IdnaTestV2.txt, toUnicode, toAsciiN and
-  toAsciiT, in the span and the pmr forms, under UTS 46 alone as the file
+  toAsciiT, in the span and the pmr forms, under UTS{nbsp}46 alone as the file
   assumes, then the strict profile over the lines whose toUnicode field
   holds no NV8, XV8 or CONTEXTO code point; and the orders of the errors,
   the same in both forms under the DNS lengths. Then the pmr forms' bound on
@@ -118,9 +118,9 @@ with the `.expected` beside it.
 [#idna-testing-conformance]
 === Conformance, and known failures
 
-IdnaTestV2.txt is UTS 46's own conformance file. idna passes every line of
+IdnaTestV2.txt is UTS{nbsp}46's own conformance file. idna passes every line of
 it, which `test/known_failures.json` records as an empty list: a line listed
-there must fail in the pass under UTS 46 alone, which the strict pass then
+there must fail in the pass under UTS{nbsp}46 alone, which the strict pass then
 leaves out, and every other line must pass, so the list never lies. The one
 kind of entry it may hold is a line that fails because of a difference
 between two versions of Unicode, the file's and the tables', with a reason
@@ -141,30 +141,45 @@ by Node.
 `<webcpp/idna/config.hpp>`, which every public header includes first,
 defines `WEBCPP_IDNA_NO_EXCEPTIONS` when the build has no exceptions, and a
 program may define it itself, as Boost.Asio's `BOOST_ASIO_NO_EXCEPTIONS`.
-idna raises no exception of its own, so the macro changes nothing in it: it
-exists so that a program can set it for every webcpp library alike. The
-lint compiles every header, test and example a second time without
-exceptions.
+idna raises no exception of its own (<<idna-invariant-2>>), so the macro
+changes nothing in it: it exists so that a program can set it for every
+webcpp library alike. The lint compiles every header, test and example a
+second time without exceptions.
 
-From the root of a webcpp checkout:
+From the root of a webcpp checkout, natively:
 
-`b2 libs/idna/test`::
-The {n-tests-native} tests, natively.
+[source,bash]
+----
+b2 libs/idna/test libs/idna/example
+----
 
-`b2 libs/idna/example`::
-The {n-examples} examples, each built, run, and its output compared.
+builds the {n-tests-native} programs of `test/Jamfile`, the tests above, the
+two `run-fail` builds of `known_failures`, each header alone and `config.hpp`
+twice, and runs every test among them; and it builds the {n-examples}
+examples, runs each and compares its output. For wasm32-wasip2,
+{n-tests-wasip2} programs and {n-examples-wasip2} examples, run by wasmtime;
+`toolset=clang-wasip3` does the same for wasm32-wasip3:
 
-`b2 libs/idna/test libs/idna/example toolset=clang-wasip2 testing.launcher=wasmtime`::
-The same for wasm32-wasip2: {n-tests-wasip2} tests and {n-examples-wasip2}
-examples. `toolset=clang-wasip3` does the same for wasm32-wasip3.
+[source,bash]
+----
+b2 libs/idna/test libs/idna/example toolset=clang-wasip2 testing.launcher=wasmtime
+----
 
-`b2 libs/idna/test libs/idna/example toolset=emscripten`::
-The same with Emscripten, whose programs b2 runs with Node itself:
-{n-tests-emscripten} tests and {n-examples-emscripten} examples.
+With Emscripten, whose programs b2 runs with Node itself,
+{n-tests-emscripten} programs and {n-examples-emscripten} examples:
 
-`b2 -a libs/idna/test//tables`::
-The own lane `tables`: the generator again, its outputs compared with the
-committed files (<<idna-unicode-generator>>).
+[source,bash]
+----
+b2 libs/idna/test libs/idna/example toolset=emscripten
+----
+
+The own lane `tables` runs the generator again and compares its outputs with
+the committed files (<<idna-unicode-generator>>):
+
+[source,bash]
+----
+b2 -a libs/idna/test//tables
+----
 
 The test matrix of every lane is at
 https://webcpporg.github.io/webcpp/report/.

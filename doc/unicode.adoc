@@ -8,7 +8,7 @@
 == Unicode and the tables
 
 idna's tables follow Unicode {unicode-version},
-`idna::unicode_version`, and UTS 46 revision {uts46-revision} for it. They
+`idna::unicode_version`, and UTS{nbsp}46 revision {uts46-revision} for it. They
 are generated from Unicode's data files into
 `<webcpp/idna/detail/tables.hpp>` as `constexpr` arrays of constant data,
 never written: no table is built at run time, none is compressed, nothing is
@@ -20,17 +20,17 @@ binary search.
 |===
 | Table | From | Used by
 
-| UTS 46 status, NV8 and XV8 mark, mapping
+| UTS{nbsp}46 status, NV8 and XV8 mark, mapping
 | `idna/IdnaMappingTable.txt`
 | the mapping, V7, IDNA2008's property
 
 | Bidi_Class
 | `ucd/extracted/DerivedBidiClass.txt`
-| RFC 5893
+| RFC{nbsp}5893
 
 | Joining_Type
 | `ucd/extracted/DerivedJoiningType.txt`
-| RFC 5892 A.1
+| RFC{nbsp}5892 A.1
 
 | Canonical_Combining_Class
 | `ucd/extracted/DerivedCombiningClass.txt`
@@ -42,7 +42,7 @@ binary search.
 
 | Script: Greek, Hebrew, Hiragana, Katakana, Han
 | `ucd/Scripts.txt`
-| RFC 5892 A.4 to A.7
+| RFC{nbsp}5892 A.4 to A.7
 
 | canonical decompositions, primary composites, NFC_Quick_Check
 | `ucd/UnicodeData.txt`, `ucd/DerivedNormalizationProps.txt`
@@ -68,9 +68,9 @@ writes anything.
 Before it writes, it checks what idna assumes of the data, and stops naming
 the assumption that fails: every status of the mapping table is one of the
 five it knows; IANA's IDNA2008 property of every code point IANA assigns one
-agrees with the derivation from UTS 46's table, U+002E FULL STOP aside, which
-IANA disallows and UTS 46 keeps as the separator no label holds; the
-CONTEXTJ and CONTEXTO code points are those of RFC 5892 appendix A; no full
+agrees with the derivation from UTS{nbsp}46's table, U+002E FULL STOP aside, which
+IANA disallows and UTS{nbsp}46 keeps as the separator no label holds; the
+CONTEXTJ and CONTEXTO code points are those of RFC{nbsp}5892 appendix A; no full
 canonical decomposition is longer than 4 code points; no Hangul syllable has
 a decomposition in `UnicodeData.txt`, since idna computes those; and every
 property value a file holds is one it knows, either one the tables keep or
@@ -141,7 +141,7 @@ version, in this order:
   `test/properties_test.cpp` pin; and the counts and line numbers of the
   test files that `test/vectors_test.cpp` pins.
 . `doc/idna.adoc`: the attributes `:unicode-version:` and
-  `:uts46-revision:`, which every mention of the version and of UTS 46's
+  `:uts46-revision:`, which every mention of the version and of UTS{nbsp}46's
   revision on this page reads.
 . The text that names the version: the `description` of
   `meta/libraries.json`, the first paragraph of `README.md`, and the section

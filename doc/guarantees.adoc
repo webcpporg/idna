@@ -10,16 +10,28 @@
 Each guarantee keeps its number and its anchor; code, tests and comments cite
 them.
 
-. [[idna-invariant-1,guarantee 1]]No span form of a conversion and no validator
-  allocates, whatever its input; a pmr form allocates from its memory
-  resource alone.
-. [[idna-invariant-2,guarantee 2]]Nothing throws but the allocation of a memory resource
-  a pmr form was given.
-. [[idna-invariant-3,guarantee 3]]The same input and options give the same output and
-  the same error on every target.
-. [[idna-invariant-4,guarantee 4]]With `verify_dns_length`, `to_ascii` returns at most
-  `idna::max_domain_length` chars, and reports a longer name as
-  `domain_too_long`, never as `output_too_small` in a buffer of that size;
-  after an error, a span form's buffer holds nothing to read.
-. [[idna-invariant-5,guarantee 5]]The tables are exactly what `tools/generate_tables.py`
-  writes from the pinned Unicode {unicode-version} files.
+. [[idna-invariant-1,guarantee 1]]No span form of a conversion and no
+  validator allocates, whatever its input; a pmr form allocates from its
+  memory resource alone.
+. [[idna-invariant-2,guarantee 2]]No conversion, validator or Punycode
+  function throws but the allocation of the memory resource a pmr form was
+  given. The category's `message(int)` returns a `std::string`, as
+  Boost.System's `error_category` declares it, so it may throw what the
+  global `operator new` throws. The member `message(char*, std::size_t)` of
+  `error_code`, which calls the category's `message(int, char*,
+  std::size_t)`, copies the message into a caller's buffer and throws
+  nothing.
+. [[idna-invariant-3,guarantee 3]]The same input and options give the same
+  output and the same error on every target.
+. [[idna-invariant-4,guarantee 4]]With `verify_dns_length`, `to_ascii`
+  returns at most `idna::max_domain_length` chars, and reports a name whose
+  ASCII form is longer as `domain_too_long`, unless an earlier error comes
+  first in the order of the errors (<<idna-converting-to-ascii>>), and never
+  as `output_too_small` in a buffer of that size. After an error, the buffer
+  of the span form of `to_ascii`, as of a Punycode span form, holds nothing
+  to read; the span form of `to_unicode` goes on after an error, as
+  UTS{nbsp}46 asks, and the `size` chars of its `unicode_result` are the name
+  as the processing left it.
+. [[idna-invariant-5,guarantee 5]]The tables are exactly what
+  `tools/generate_tables.py` writes from the pinned Unicode {unicode-version}
+  files.

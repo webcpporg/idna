@@ -25,7 +25,7 @@ namespace idna = webcpp::idna;
 namespace {
 
 /** The driver over an inline label into a span or nothing can throw nothing; over a growing label,
-    or into a string, it may throw what the memory resource throws. */
+    or into a string, it may throw what the memory resource throws (idna-invariant-2). */
 template <class Label, class Sink>
 constexpr bool nothrow = noexcept(
     detail::process(std::string_view(), std::declval<const idna::options&>(), detail::mode::map,

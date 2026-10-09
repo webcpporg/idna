@@ -7,7 +7,7 @@
 [#idna-converting]
 == Converting names
 
-`idna::to_ascii` and `idna::to_unicode` are UTS 46's ToASCII and ToUnicode,
+`idna::to_ascii` and `idna::to_unicode` are UTS{nbsp}46's ToASCII and ToUnicode,
 sections 4.2 and 4.3: the name is mapped, normalized to NFC, split into
 labels at each full stop, and each label is converted and checked. The first
 example (<<idna-introduction-first>>) calls both. Each has two forms: one
@@ -17,7 +17,7 @@ returns a string from a memory resource (<<idna-allocation>>).
 [#idna-converting-processing]
 === The processing
 
-Each code point is looked up in UTS 46's mapping table: a code point that is
+Each code point is looked up in UTS{nbsp}46's mapping table: a code point that is
 `valid` stays, one that is `mapped` is replaced by its mapping (`A` by `a`,
 `ﬁ` by `fi`, U+3002 IDEOGRAPHIC FULL STOP by `.`), one that is `ignored` is
 removed (U+00AD SOFT HYPHEN), a `deviation` stays unless the processing is
@@ -57,15 +57,15 @@ storage is too long for the DNS anyway, and both forms refuse it there
 
 `to_unicode(output, domain, opts)` writes the Unicode form, in UTF-8, and
 returns an `idna::unicode_result`: how many chars it wrote, and the first
-error. As UTS 46 asks, the conversion goes on after an error, so that a name
+error. As UTS{nbsp}46 asks, the conversion goes on after an error, so that a name
 can be shown even when it is not valid: each label is written as the
 processing leaves it, mapped and normalized, an A-label decoded when its
 Punycode decodes and kept as it is otherwise. A label that fails its checks
 is written so too, as the toUnicode column of IdnaTestV2 records it, and no
 U+FFFD is put in place of what failed: `+A_B.Example+` is written
 `+a_b.example+`, with `not_ldh`. With the DNS lengths verified, a final empty
-label, the DNS root of `example.`, is no error in the Unicode form, as UTS
-46's X4_2 allows; any other empty label is `empty_label`. When the span is
+label, the DNS root of `example.`, is no error in the Unicode form, as
+UTS{nbsp}46's X4_2 allows; any other empty label is `empty_label`. When the span is
 full, the writing stops at a code point boundary and the error is
 `output_too_small`, which takes the place of any other: the caller needs a
 larger span before anything else. Input that is not well-formed UTF-8 writes
@@ -82,16 +82,16 @@ converts the label (<<idna-limits-storage>>).
 === Options
 
 Every conversion and every check takes an `idna::options`, the flags of
-UTS 46 section 4 and one of idna's own, `idna2008`. The defaults are the
+UTS{nbsp}46 section 4 and one of idna's own, `idna2008`. The defaults are the
 strict profile: every check on, nontransitional processing, the DNS lengths
 verified, and IDNA2008's validity on top. `idna::options` is an aggregate, so
 a program names only what changes: `idna::options{.idna2008 = false}` is
-UTS 46 alone, and `idna::options{.verify_dns_length = false}` lets labels of
+UTS{nbsp}46 alone, and `idna::options{.verify_dns_length = false}` lets labels of
 any length through.
 
 [cols="2,2,1,4",options="header"]
 |===
-| Member | UTS 46's flag | Default | When true
+| Member | UTS{nbsp}46's flag | Default | When true
 
 | `check_hyphens`
 | CheckHyphens
@@ -104,13 +104,13 @@ any length through.
 | CheckBidi
 | true
 | Every label of a Bidi domain name, one that holds an R, AL or AN code
-  point, satisfies the six rules of RFC 5893 section 2.
+  point, satisfies the six rules of RFC{nbsp}5893 section 2.
 
 | `check_joiners`
 | CheckJoiners
 | true
 | U+200C ZERO WIDTH NON-JOINER and U+200D ZERO WIDTH JOINER stand only where
-  RFC 5892 A.1 and A.2 allow them.
+  RFC{nbsp}5892 A.1 and A.2 allow them.
 
 | `use_std3_ascii_rules`
 | UseSTD3ASCIIRules
@@ -128,7 +128,7 @@ any length through.
 | Transitional_Processing
 | false
 | The deviations are mapped: `ß` to `ss`, `ς` to `σ`, the joiners removed.
-  UTS 46 deprecates it.
+  UTS{nbsp}46 deprecates it.
 
 | `ignore_invalid_punycode`
 | IgnoreInvalidPunycode
@@ -139,7 +139,7 @@ any length through.
 | `idna2008`
 | none
 | true
-| IDNA2008's validity on top of UTS 46's: a code point that UTS 46 marks NV8
+| IDNA2008's validity on top of UTS{nbsp}46's: a code point that UTS{nbsp}46 marks NV8
   or XV8, DISALLOWED in IDNA2008, is refused, and the CONTEXTO rules of
-  RFC 5892 A.3 to A.9 apply.
+  RFC{nbsp}5892 A.3 to A.9 apply.
 |===

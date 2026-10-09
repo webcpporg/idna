@@ -13,13 +13,22 @@
 #include <array>
 #include <cstddef>
 #include <memory_resource>
+#include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace idna = webcpp::idna;
 namespace punycode = webcpp::idna::punycode;
 
 namespace {
+
+// The span forms throw nothing; the pmr forms may throw what their memory resource throws
+// (idna-invariant-2).
+static_assert(noexcept(punycode::encode(std::declval<std::span<char>>(), std::u32string_view())));
+static_assert(noexcept(punycode::decode(std::declval<std::span<char32_t>>(), std::string_view())));
+static_assert(!noexcept(punycode::encode(std::u32string_view())));
+static_assert(!noexcept(punycode::decode(std::string_view())));
 
 /** One sample of RFC 3492 section 7.1: its code points, and its Punycode as the RFC prints it,
     mixed-case annotation included. */

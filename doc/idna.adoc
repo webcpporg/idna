@@ -16,8 +16,8 @@
 
 idna is a header-only library of internationalized domain names in {cpp}20,
 one of the libraries of https://github.com/webcpporg/webcpp[webcpp]:
-Punycode (RFC 3492), Unicode's UTS 46 processing, to ASCII and to Unicode,
-and the validity rules of IDNA2008 (RFC 5890 to 5893), over Unicode
+Punycode (RFC{nbsp}3492), Unicode's UTS{nbsp}46 processing, to ASCII and to Unicode,
+and the validity rules of IDNA2008 (RFC{nbsp}5890 to 5893), over Unicode
 {unicode-version} tables generated into its headers. Every operation returns
 its error as a value, and every operation that writes into a caller's buffer
 allocates nothing.

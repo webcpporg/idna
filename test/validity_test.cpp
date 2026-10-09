@@ -27,6 +27,12 @@ namespace idna = webcpp::idna;
 
 namespace {
 
+// The validators throw nothing (idna-invariant-2).
+static_assert(noexcept(idna::check_label(std::string_view())));
+static_assert(noexcept(idna::check_domain(std::string_view())));
+static_assert(noexcept(idna::is_valid_label(std::string_view())));
+static_assert(noexcept(idna::is_valid_domain(std::string_view())));
+
 /** check_domain refuses `domain` with `expected`, and is_valid_domain agrees. */
 void refuses(std::string_view domain, idna::error expected,
              const idna::options& opts = idna::options()) {

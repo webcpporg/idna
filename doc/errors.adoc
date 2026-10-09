@@ -12,33 +12,33 @@ Every operation of idna that can fail returns its error as a value: an
 always converts what it can, a struct whose `error` is a
 `boost::system::error_code`. idna throws nothing of its own. Its errors are
 the values of `idna::error`, of the category `webcpp.idna`, one per family
-of rules rather than one per status code of UTS 46: IdnaTestV2, Unicode's
+of rules rather than one per status code of UTS{nbsp}46: IdnaTestV2, Unicode's
 own conformance file, says an implementation "need only record that there
 is an error". The first error found is the one reported: the labels are
-processed in order, and the checks of a label in the order UTS 46 section 4.1
+processed in order, and the checks of a label in the order UTS{nbsp}46 section 4.1
 lists them, IDNA2008's last.
 
 [cols="1,3,3,3",options="header"]
 |===
 | Value | Enumerator | Reports | Message
 
-| 1 | `invalid_utf8` | input that is not well-formed UTF-8 (RFC 3629) | invalid UTF-8
-| 2 | `disallowed` | UTS 46 V7: a status other than valid, or deviation when nontransitional; V5: a U+002E inside one label | disallowed code point
-| 3 | `not_idna2008` | a code point UTS 46 marks NV8 or XV8, DISALLOWED in IDNA2008 | code point disallowed by IDNA2008
-| 4 | `not_ldh` | UTS 46 U1: ASCII other than `a` to `z`, `0` to `9` and the hyphen | ASCII code point other than a letter, a digit or a hyphen
-| 5 | `not_nfc` | UTS 46 V1, RFC 5891 section 5.4 | label not in Normalization Form C
-| 6 | `hyphen_in_third_and_fourth` | UTS 46 V2 | hyphens in the third and fourth positions
-| 7 | `hyphen_at_start_or_end` | UTS 46 V3 | hyphen at the start or end of a label
-| 8 | `ace_prefix` | UTS 46 V4: `xn--` while `check_hyphens` is off | label starts with xn--
-| 9 | `leading_combining_mark` | UTS 46 V6, RFC 5891 section 5.4 | label starts with a combining mark
-| 10 | `contextj` | IdnaTestV2 C1, C2: RFC 5892 A.1, A.2 | joiner outside its allowed context
-| 11 | `contexto` | RFC 5892 A.3 to A.9 | code point outside its allowed context
-| 12 | `bidi` | IdnaTestV2 B1 to B6: RFC 5893 section 2 | Bidi rule violated
-| 13 | `invalid_punycode` | RFC 3492 decoding; UTS 46 P4; an A-label not in its canonical form | invalid Punycode
-| 14 | `punycode_overflow` | RFC 3492 section 6.4; UTS 46 A3; a label's Punycode past the conversions' bound of 256 code points (<<idna-limits-punycode>>) | Punycode overflow
-| 15 | `empty_label` | UTS 46 A4_2 and X4_2 | empty label
-| 16 | `label_too_long` | UTS 46 A4_2: more than 63 octets | label longer than 63 octets
-| 17 | `domain_too_long` | UTS 46 A4_1: more than 253 octets | domain name longer than 253 octets
+| 1 | `invalid_utf8` | input that is not well-formed UTF-8 (RFC{nbsp}3629) | invalid UTF-8
+| 2 | `disallowed` | UTS{nbsp}46 V7: a status other than valid, or deviation when nontransitional; V5: a U+002E inside one label | disallowed code point
+| 3 | `not_idna2008` | a code point UTS{nbsp}46 marks NV8 or XV8, DISALLOWED in IDNA2008 | code point disallowed by IDNA2008
+| 4 | `not_ldh` | UTS{nbsp}46 U1: ASCII other than `a` to `z`, `0` to `9` and the hyphen | ASCII code point other than a letter, a digit or a hyphen
+| 5 | `not_nfc` | UTS{nbsp}46 V1, RFC{nbsp}5891 section 5.4 | label not in Normalization Form C
+| 6 | `hyphen_in_third_and_fourth` | UTS{nbsp}46 V2 | hyphens in the third and fourth positions
+| 7 | `hyphen_at_start_or_end` | UTS{nbsp}46 V3 | hyphen at the start or end of a label
+| 8 | `ace_prefix` | UTS{nbsp}46 V4: `xn--` while `check_hyphens` is off | label starts with xn--
+| 9 | `leading_combining_mark` | UTS{nbsp}46 V6, RFC{nbsp}5891 section 5.4 | label starts with a combining mark
+| 10 | `contextj` | IdnaTestV2 C1, C2: RFC{nbsp}5892 A.1, A.2 | joiner outside its allowed context
+| 11 | `contexto` | RFC{nbsp}5892 A.3 to A.9 | code point outside its allowed context
+| 12 | `bidi` | IdnaTestV2 B1 to B6: RFC{nbsp}5893 section 2 | Bidi rule violated
+| 13 | `invalid_punycode` | RFC{nbsp}3492 decoding; UTS{nbsp}46 P4; an A-label not in its canonical form | invalid Punycode
+| 14 | `punycode_overflow` | RFC{nbsp}3492 section 6.4; UTS{nbsp}46 A3; a label's Punycode past the conversions' bound of 256 code points (<<idna-limits-punycode>>) | Punycode overflow
+| 15 | `empty_label` | UTS{nbsp}46 A4_2 and X4_2 | empty label
+| 16 | `label_too_long` | UTS{nbsp}46 A4_2: more than 63 octets | label longer than 63 octets
+| 17 | `domain_too_long` | UTS{nbsp}46 A4_1: more than 253 octets | domain name longer than 253 octets
 | 18 | `output_too_small` | the caller's span cannot hold the result | output too small
 | 19 | `storage_exhausted` | a label beyond the inline working storage, with no memory resource | label beyond the working storage
 |===

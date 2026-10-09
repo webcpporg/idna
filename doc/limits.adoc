@@ -13,7 +13,7 @@
 Under `verify_dns_length`, the default, a label is 1 to
 `idna::max_label_length`, 63, octets in its ASCII form, and a name 1 to
 `idna::max_domain_length`, 253, without a final root label, which is
-refused: RFC 1034 section 3.1's limits, as UTS 46 section 4.2 states them. A
+refused: RFC{nbsp}1034 section 3.1's limits, as UTS{nbsp}46 section 4.2 states them. A
 U-label is measured by its A-label: 55 `a` and a `ü` make an A-label of 63
 octets, and 56 make one of 64.
 
@@ -53,7 +53,7 @@ ends with the last label written before the long one: a name of the labels
 [#idna-limits-punycode]
 === Punycode's bound
 
-Punycode's work grows with the square of a label's length: RFC 3492's
+Punycode's work grows with the square of a label's length: RFC{nbsp}3492's
 encoder passes over the label once for each distinct code point, and its
 decoder inserts each code point among those before it. The conversions bound
 it at 256 code points, the working storage's, and Punycode past the bound is

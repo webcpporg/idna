@@ -7,13 +7,13 @@
 [#idna-punycode]
 == Punycode
 
-Punycode, RFC 3492, writes a string of code points with the ASCII letters,
+Punycode, RFC{nbsp}3492, writes a string of code points with the ASCII letters,
 digits and hyphen alone, and reads it back: the code points below U+0080, the
 basic ones, are copied first, then a hyphen, then numbers in base 36 that say
 where each other code point goes. An A-label is `+xn--+` followed by the
 Punycode of its U-label. `idna::punycode::encode` and `decode` are that
 encoding, without the prefix, which the conversions add and remove. Here
-is RFC 3492 section 7.1's sample (L), 3年B組金八先生:
+is RFC{nbsp}3492 section 7.1's sample (L), 3年B組金八先生:
 
 [source]
 ----
@@ -29,7 +29,7 @@ include::{examples}/idna_punycode.cpp[tag=decode,indent=0]
 
 Both return the number of chars or code points written, or an error: a
 character that is no digit, a number cut short, a value that is not a
-Unicode scalar value, or arithmetic past 32 bits, which RFC 3492 section 6.4
+Unicode scalar value, or arithmetic past 32 bits, which RFC{nbsp}3492 section 6.4
 refuses:
 
 [source]
@@ -45,9 +45,9 @@ include::{examples}/idna_punycode.expected[]
 ----
 
 The digits are read in either case; the basic code points are copied as they
-are, case included, as RFC 3492's mixed-case annotation leaves them, and
+are, case included, as RFC{nbsp}3492's mixed-case annotation leaves them, and
 `encode` writes its digits in lowercase. A hyphen at the very start is no
-delimiter, since nothing precedes it, so `-9uc` is refused, as RFC 3492
+delimiter, since nothing precedes it, so `-9uc` is refused, as RFC{nbsp}3492
 says: it is the A-label `+xn---9uc+`, which a careless decoder would read as
 `+xn--9uc+`. Each function has a second form that returns a `std::pmr` string
 from a memory resource (<<idna-allocation>>). Neither form bounds the length

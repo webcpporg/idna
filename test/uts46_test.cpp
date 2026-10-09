@@ -9,7 +9,8 @@
 // file assumes, then the strict profile over the lines whose toUnicode field holds no NV8, XV8 or
 // CONTEXTO code point. A line of test/known_failures.json must fail, and every other must pass.
 // Then the orders of the errors, the storage, the bound on a label's Punycode in the pmr forms, and
-// what each form may throw.
+// what each form may throw. Every target runs the same lines and asks the same outputs of them:
+// the page's guarantee 3, idna-invariant-3.
 
 #include <webcpp/idna/detail/utf8.hpp>
 #include <webcpp/idna/uts46.hpp>
@@ -35,7 +36,8 @@ using webcpp::test::idna_vectors;
 
 namespace {
 
-// The span forms throw nothing; the pmr forms may throw what their memory resource throws.
+// The span forms throw nothing; the pmr forms may throw what their memory resource throws
+// (idna-invariant-2).
 static_assert(noexcept(idna::to_ascii(std::declval<std::span<char>>(), std::string_view())));
 static_assert(noexcept(idna::to_unicode(std::declval<std::span<char>>(), std::string_view())));
 static_assert(!noexcept(idna::to_ascii(std::string_view())));
@@ -107,16 +109,40 @@ void idna_test_v2_strict() {
     }
 }
 
-/** With verify_dns_length, a name over 253 octets is domain_too_long, never output_too_small, in
-    the 253 chars the guide says always suffice. */
+/** `count` labels of nine letters, joined by dots: 10 * count - 1 octets. */
+std::string nine_letter_labels(int count) {
+    std::string name = "abcdefghi";
+    for (int i = 1; i < count; ++i) {
+        name += ".abcdefghi";
+    }
+    return name;
+}
+
+/**
+ With verify_dns_length, to_ascii writes at most 253 chars, and a name whose ASCII form is longer
+ is domain_too_long, never output_too_small, in the 253 chars the guide says always suffice, unless
+ an earlier error comes first: a label's, then the Bidi rule's (idna-invariant-4).
+*/
 void the_length_comes_before_the_buffer() {
     std::array<char, idna::max_domain_length> out{};
-    std::string name;
-    for (int i = 0; i < 30; ++i) {
-        name += "abcdefghi.";
+    const std::string longest = nine_letter_labels(25) + ".abc";
+    static_assert(idna::max_domain_length == 253);
+    const idna::result<std::size_t> fits = idna::to_ascii(out, longest);
+    BOOST_TEST(fits.has_value() && fits.value() == 253U &&
+               std::string_view(out.data(), fits.value()) == longest);
+    BOOST_TEST(idna::to_ascii(out, longest + "d").error() == idna::error::domain_too_long);
+    BOOST_TEST(idna::to_ascii(out, nine_letter_labels(30) + ".x").error() ==
+               idna::error::domain_too_long);
+    // 20 labels of 7 octets each, "b\303\274cher", are 159 octets, and 279 in their ASCII form.
+    std::string grows = "b\303\274cher";
+    for (int i = 1; i < 20; ++i) {
+        grows += ".b\303\274cher";
     }
-    name += 'x';
-    BOOST_TEST(idna::to_ascii(out, name).error() == idna::error::domain_too_long);
+    BOOST_TEST(idna::to_ascii(out, grows).error() == idna::error::domain_too_long);
+    BOOST_TEST(idna::to_ascii(out, "a_b." + nine_letter_labels(30)).error() ==
+               idna::error::not_ldh);
+    BOOST_TEST(idna::to_ascii(out, "0a.\327\220." + nine_letter_labels(30)).error() ==
+               idna::error::bidi);
     std::array<char, 5> tiny{};
     BOOST_TEST(idna::to_ascii(tiny, "b\303\274cher.example").error() ==
                idna::error::output_too_small);
@@ -134,7 +160,7 @@ void to_unicode_stops_at_a_code_point() {
     BOOST_TEST(cut_after_error.error == idna::error::output_too_small);
 }
 
-/** ToUnicode converts as much as it can: an error does not stop it. */
+/** ToUnicode converts as much as it can: an error does not stop it (idna-invariant-4). */
 void to_unicode_goes_on() {
     buffer out{};
     const idna::unicode_result result = idna::to_unicode(out, "A..xn--bcher-kva");
