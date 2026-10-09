@@ -1,0 +1,74 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#idna-converting]
+== Converting names
+
+[#idna-converting-options]
+=== Options
+
+Every conversion and every check takes an `idna::options`, the flags of
+UTS 46 section 4 and one of idna's own, `idna2008`. The defaults are the
+strict profile: every check on, nontransitional processing, the DNS lengths
+verified, and IDNA2008's validity on top. `idna::options` is an aggregate, so
+a program names only what changes: `idna::options{.idna2008 = false}` is
+UTS 46 alone, and `idna::options{.verify_dns_length = false}` lets labels of
+any length through.
+
+[cols="2,2,1,4",options="header"]
+|===
+| Member | UTS 46's flag | Default | When true
+
+| `check_hyphens`
+| CheckHyphens
+| true
+| No hyphen in both the third and the fourth position of a label (V2), none
+  at either end (V3). When false, only a label that starts with `xn--` is
+  refused (V4).
+
+| `check_bidi`
+| CheckBidi
+| true
+| Every label of a Bidi domain name, one that holds an R, AL or AN code
+  point, satisfies the six rules of RFC 5893 section 2.
+
+| `check_joiners`
+| CheckJoiners
+| true
+| U+200C ZERO WIDTH NON-JOINER and U+200D ZERO WIDTH JOINER stand only where
+  RFC 5892 A.1 and A.2 allow them.
+
+| `use_std3_ascii_rules`
+| UseSTD3ASCIIRules
+| true
+| The only ASCII code points of a label are `a` to `z`, `0` to `9` and the
+  hyphen (U1).
+
+| `verify_dns_length`
+| VerifyDnsLength
+| true
+| Every label is 1 to 63 octets in its ASCII form, the name 1 to 253, and a
+  final empty root label is refused (A4_1, A4_2).
+
+| `transitional_processing`
+| Transitional_Processing
+| false
+| The deviations are mapped: `ß` to `ss`, `ς` to `σ`, the joiners removed.
+  UTS 46 deprecates it.
+
+| `ignore_invalid_punycode`
+| IgnoreInvalidPunycode
+| false
+| A label that starts with `xn--` and does not decode is kept as it is,
+  without an error.
+
+| `idna2008`
+| none
+| true
+| IDNA2008's validity on top of UTS 46's: a code point that UTS 46 marks NV8
+  or XV8, DISALLOWED in IDNA2008, is refused, and the CONTEXTO rules of
+  RFC 5892 A.3 to A.9 apply.
+|===

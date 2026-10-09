@@ -1,0 +1,10 @@
+{
+    "key": "idna",
+    "name": "idna",
+    "authors": ["R"],
+    "description": "IDNA2008 and UTS 46 for C++20: Punycode, ToASCII and ToUnicode, and label validity, over generated Unicode 17.0 tables.",
+    "category": ["String"],
+    "maintainers": ["R <github.overboard312@passmail.net>"],
+    "cxxstd": "20",
+    "port-of": null
+}

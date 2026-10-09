@@ -1,0 +1,12 @@
+# Copyright (c) 2026 WebCpp.org
+#
+# Distributed under the Boost Software License, Version 1.0. (See
+# accompanying file LICENSE_1_0.txt or copy at
+# https://www.boost.org/LICENSE_1_0.txt)
+#
+# idna, IDNA2008 and UTS 46 for C++20. A program uses it through
+# /webcpp/idna//idna, which adds its headers and Boost's.
+
+project /webcpp/idna ;
+
+alias idna : : : : <include>include <library>/boost//headers ;
