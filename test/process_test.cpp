@@ -134,6 +134,23 @@ void undecodable_labels_kept() {
     BOOST_TEST(!found);
     BOOST_TEST_EQ(written, "a." + undecodable);
     BOOST_TEST(!run("xn--_99", detail::mode::map, detail::form::ascii, ignore).second);
+    // A kept label is unchecked, the Bidi rule included: with U+05D0 before it, the name is a Bidi
+    // domain name, where a label that ends with "_" would break rule 6.
+    for (const detail::form f : {detail::form::ascii, detail::form::unicode}) {
+        BOOST_TEST(!run("\327\220.xn--_", detail::mode::map, f, ignore).second);
+    }
+    const idna::options lax{.use_std3_ascii_rules = false, .idna2008 = false};
+    BOOST_TEST(run("\327\220.a_", detail::mode::as_given, detail::form::ascii, lax).second ==
+               idna::error::bidi);
+}
+
+/** As given, the ASCII form of an A-label is the label itself, its letters in lowercase, and of a
+    U-label its A-label. */
+void the_ascii_form_as_given() {
+    const auto [written, found] = run("xn--bcher-kva.XN--BCHER-KVA.b\303\274cher.a",
+                                      detail::mode::as_given, detail::form::ascii);
+    BOOST_TEST(!found);
+    BOOST_TEST_EQ(written, "xn--bcher-kva.xn--bcher-kva.xn--bcher-kva.a");
 }
 
 }  // namespace
@@ -145,5 +162,6 @@ int main() {
     a_growing_label_goes_on();
     the_root_label();
     undecodable_labels_kept();
+    the_ascii_form_as_given();
     return boost::report_errors();
 }

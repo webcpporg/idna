@@ -76,7 +76,8 @@ target the Jamfile declares:
 | The label driver in both forms on what ends a label early: an A-label that
   decodes to nothing, a label beyond the storage after an earlier error,
   gathered or in the NFC check's copy, and the empty labels, the root label
-  among them; and that it throws only what a memory resource throws. Like
+  among them, an undecodable label kept, and the ASCII form as given; and
+  that it throws only what a memory resource throws. Like
   every test, built with the standard library's own checks on, so that a
   read past an empty label traps.
 
@@ -86,9 +87,12 @@ target the Jamfile declares:
   `idn-hostname` that UTS 46 alone accepts, as U-labels and as A-labels;
   A-labels in either case, not ASCII, decoding to ASCII, and labels that
   only look like one; the lengths at 63 and 64, 253 and 254; the inline
-  storage's limit; the first error of a name with several; and a name of
-  65,536 labels checked in less than 20 times the time of a name as long of
-  labels of 255 letters.
+  storage's limit; the first error of a name with several; a name of 65,536
+  labels checked in less than 20 times the time of a name as long of labels
+  of 255 letters; and the rows of IdnaTestV2.txt in both passes, as given:
+  each output the file records without an error is valid, its A-labels in
+  uppercase too, and a source already in its processed form, or in its ASCII
+  form, has the verdict the file gives it.
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,

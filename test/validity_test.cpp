@@ -7,9 +7,13 @@
 // IDNA2008's validity of labels and domains as they are given: every rule with the error it
 // reports, and which of two broken rules is reported; the strings the JSON Schema suite's
 // idn-hostname finds every UTS 46 library wrong on, as U-labels and as A-labels; the DNS lengths at
-// their limits; and a name of many labels checked in linear time.
+// their limits; a name of many labels checked in linear time; and the rows of IdnaTestV2.txt whose
+// outputs are names as given.
 
 #include <webcpp/idna/validity.hpp>
+
+#include "idna_vectors.hpp"
+#include "known_failures.hpp"
 
 #include <boost/core/lightweight_test.hpp>
 
@@ -180,11 +184,21 @@ void lengths() {
     BOOST_TEST(idna::is_valid_label(std::string(55, 'a') + "\303\274"));
     BOOST_TEST(idna::check_label(std::string(56, 'a') + "\303\274").error() ==
                idna::error::label_too_long);
+    // The same two labels as A-labels, given as such.
+    BOOST_TEST(idna::is_valid_label("xn--" + std::string(55, 'a') + "-8yf"));
+    BOOST_TEST(idna::check_label("xn--" + std::string(56, 'a') + "-t2f").error() ==
+               idna::error::label_too_long);
     const std::string name_253 =
         label_63 + "." + label_63 + "." + label_63 + "." + std::string(61, 'a');
     BOOST_TEST_EQ(name_253.size(), 253U);
     accepts(name_253);
     refuses(name_253 + "a", idna::error::domain_too_long);
+    // The same lengths with A-labels given as such, separators counted before each.
+    const std::string a_label_63 = "xn--" + std::string(55, 'a') + "-8yf";
+    const std::string a_name_253 =
+        a_label_63 + "." + a_label_63 + "." + a_label_63 + "." + std::string(61, 'a');
+    accepts(a_name_253);
+    refuses(a_name_253 + "a", idna::error::domain_too_long);
     refuses("", idna::error::empty_label);
     refuses("a..b", idna::error::empty_label);
     refuses("a.", idna::error::empty_label);  // the root label, under VerifyDnsLength
@@ -303,6 +317,126 @@ void many_labels_in_linear_time() {
     BOOST_TEST_LT(measured, 20 * baseline);
 }
 
+/** Whether `domain` holds an empty label, which no row's output may be checked for as given: its
+    verdict is the DNS lengths', and toUnicode's X4_2 applies to it alone. */
+bool has_empty_label(std::string_view domain) {
+    return domain.empty() || domain.front() == '.' || domain.back() == '.' ||
+           domain.find("..") != std::string_view::npos;
+}
+
+/** `domain` with every letter of each label that starts with "xn--" in uppercase. */
+std::string upper_a_labels(std::string_view domain) {
+    std::string upper(domain);
+    std::size_t begin = 0;
+    while (begin <= upper.size()) {
+        const std::size_t end = std::min(upper.find('.', begin), upper.size());
+        if (std::string_view(upper).substr(begin, end - begin).starts_with("xn--")) {
+            for (std::size_t i = begin; i < end; ++i) {
+                upper[i] = upper[i] >= 'a' && upper[i] <= 'z' ? static_cast<char>(upper[i] - 32)
+                                                              : upper[i];
+            }
+        }
+        begin = end + 1;
+    }
+    return upper;
+}
+
+/** How many checks of each kind a pass over IdnaTestV2.txt made. */
+struct as_given_counts {
+    /** Error-free toAsciiN results checked. */
+    std::size_t ascii_n = 0;
+
+    /** Error-free toAsciiT results checked. */
+    std::size_t ascii_t = 0;
+
+    /** Error-free toUnicode results checked. */
+    std::size_t unicode = 0;
+
+    /** Sources already in their processed form checked. */
+    std::size_t source = 0;
+
+    /** Sources already in their ASCII form checked. */
+    std::size_t ascii_source = 0;
+
+    /** Names of one label also checked by check_label. */
+    std::size_t labels = 0;
+};
+
+/** The verdict of check_domain on `domain`, which check_label must share when `domain` is one
+    label. */
+bool valid_as_given(std::string_view domain, const idna::options& opts, as_given_counts& counts) {
+    const bool valid = idna::is_valid_domain(domain, opts);
+    if (domain.find('.') == std::string_view::npos) {
+        ++counts.labels;
+        BOOST_TEST_EQ(idna::is_valid_label(domain, opts), valid);
+    }
+    return valid;
+}
+
+/**
+ The checks of one row as given, and whether every one held: an error-free toAsciiN is valid, its
+ A-labels in uppercase too, and so is an error-free toAsciiT; without the DNS lengths, an error-free
+ toUnicode is valid, and a source already in its processed form has toUnicode's verdict; a source
+ already in its ASCII form has toAsciiN's.
+*/
+bool row_as_given(const webcpp::test::idna_vector& row, const idna::options& opts,
+                  as_given_counts& counts) {
+    idna::options no_lengths = opts;
+    no_lengths.verify_dns_length = false;
+    bool held = true;
+    if (!row.to_ascii_n_error) {
+        ++counts.ascii_n;
+        held = valid_as_given(row.to_ascii_n, opts, counts) && held;
+        held = valid_as_given(upper_a_labels(row.to_ascii_n), opts, counts) && held;
+    }
+    if (!row.to_ascii_t_error) {
+        ++counts.ascii_t;
+        held = valid_as_given(row.to_ascii_t, opts, counts) && held;
+    }
+    if (!row.to_unicode_error && !has_empty_label(row.to_unicode)) {
+        ++counts.unicode;
+        held = valid_as_given(row.to_unicode, no_lengths, counts) && held;
+    }
+    const bool processed = row.source == row.to_unicode && !has_empty_label(row.source) &&
+                           webcpp::idna::detail::utf8::is_valid(row.source);
+    if (processed) {
+        ++counts.source;
+        held = valid_as_given(row.source, no_lengths, counts) == !row.to_unicode_error && held;
+    }
+    if (row.source == row.to_ascii_n) {
+        ++counts.ascii_source;
+        held = valid_as_given(row.source, opts, counts) == !row.to_ascii_n_error && held;
+    }
+    return held;
+}
+
+/**
+ IdnaTestV2.txt's rows through check_domain and check_label, as given: UTS 46 alone over every row,
+ then the strict profile over the rows of the strict pass, each row's verdict held against
+ test/known_failures.json.
+
+ Tip: UTS 46's mapping of a row's processed form changes nothing, so each output the file records
+ as error-free must be valid as given, and a source already in that form has its verdict.
+*/
+void idna_test_v2_as_given() {
+    for (const bool strict : {false, true}) {
+        const idna::options opts{.idna2008 = strict};
+        as_given_counts counts;
+        for (const webcpp::test::idna_vector& row : webcpp::test::idna_vectors) {
+            if (strict && !row.strict) {
+                continue;
+            }
+            webcpp::test::as_listed(row.line, row.known_failure, row_as_given(row, opts, counts));
+        }
+        BOOST_TEST_GT(counts.ascii_n, 0U);
+        BOOST_TEST_GT(counts.ascii_t, 0U);
+        BOOST_TEST_GT(counts.unicode, 0U);
+        BOOST_TEST_GT(counts.source, 0U);
+        BOOST_TEST_GT(counts.ascii_source, 0U);
+        BOOST_TEST_GT(counts.labels, 0U);
+    }
+}
+
 }  // namespace
 
 int main() {
@@ -320,5 +454,6 @@ int main() {
     labels_that_only_look_like_a_labels();
     the_first_error_wins();
     many_labels_in_linear_time();
+    idna_test_v2_as_given();
     return boost::report_errors();
 }

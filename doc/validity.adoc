@@ -11,7 +11,8 @@
 domain name, is valid as it is given, by IDNA2008's rules and UTS 46's
 validity criteria, without UTS 46's mapping: nothing is lowercased,
 normalized or replaced, so a label with a capital letter, or one not in NFC,
-is refused. They are the checks a program needs when a name must already be
+is refused. The one exception is an A-label, whose `+xn--+` and Punycode are
+read in either case, as RFC 5890 compares them. They are the checks a program needs when a name must already be
 in its final form, as a hostname's A-labels must. `is_valid_label` and
 `is_valid_domain` say the same as a `bool`.
 

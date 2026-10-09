@@ -17,6 +17,7 @@
 
 #include <webcpp/idna/detail/label_buffer.hpp>
 #include <webcpp/idna/detail/process.hpp>
+#include <webcpp/idna/detail/utf8.hpp>
 #include <webcpp/idna/errors.hpp>
 #include <webcpp/idna/options.hpp>
 
@@ -32,9 +33,11 @@ namespace webcpp::idna {
 
  An A-label, "xn--" in any ASCII case, is decoded, validated as a U-label,
  re-encoded and compared with its input, ASCII letters in either case. Nothing
- is mapped, so a label not in NFC, or holding a code point UTS 46 would map
- (an ASCII capital letter among them), is refused. The Bidi rule is applied to
- the label as to a domain of one label. Nothing allocates.
+ else is mapped, so a label not in NFC, or holding a code point UTS 46 would
+ map (an ASCII capital letter outside an A-label among them), is refused. The
+ Bidi rule is applied to the label as to a domain of one label. An empty label
+ is refused under `opts.verify_dns_length` and accepted without it, as UTS 46
+ says. Nothing allocates.
 
  @param label The label, without a separator.
  @param opts The checks to apply; the defaults are the strict profile.

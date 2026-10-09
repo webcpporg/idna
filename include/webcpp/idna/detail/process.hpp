@@ -134,12 +134,18 @@ constexpr bool is_ldh(char32_t cp) noexcept {
     return (cp >= U'a' && cp <= U'z') || (cp >= U'0' && cp <= U'9') || cp == U'-';
 }
 
-/** Whether the driver over a `Label` into a `Sink` throws nothing: an inline label, whose storage
-    is fixed, and a sink that throws nothing. A growing label and a string sink may throw what their
-    memory resource throws. */
+/**
+ Whether the driver over a `Label` into a `Sink` throws nothing: every operation it calls on them
+ is `noexcept`, as an inline label's and a span's are; a growing label and a string sink may throw
+ what their memory resource throws.
+*/
 template <class Label, class Sink>
-inline constexpr bool nothrow_process =
-    !nfc::growing<Label> && noexcept(std::declval<Sink&>().put(std::string_view()));
+inline constexpr bool nothrow_process = noexcept(std::declval<Label&>().push_back(char32_t())) &&
+                                        noexcept(std::declval<Label&>().reset(std::size_t())) &&
+                                        noexcept(std::declval<Label&>().keep_ascii()) &&
+                                        noexcept(fresh_like(std::declval<const Label&>())) &&
+                                        noexcept(nfc::compose_label(std::declval<Label&>())) &&
+                                        noexcept(std::declval<Sink&>().put(std::string_view()));
 
 /**
  UTS 46 section 4 over a domain, label by label, into a sink.
@@ -270,7 +276,7 @@ private:
     }
 
     /** Records what @ref validate found, and says whether the driver goes on: never once the
-        storage ran out. */
+        storage ran out, whose error @ref exhausted has already kept. */
     bool settle(const boost::system::error_code& found) noexcept {
         if (stopped_) {
             return false;
@@ -319,6 +325,11 @@ private:
             return false;
         }
         note_bidi(unicode);
+        if (mode_ == mode::as_given && form_ == form::ascii) {
+            // The round trip held, so the ASCII form is the label as given, lowercased.
+            put(original);
+            return check_length(original.size());
+        }
         return write(unicode);
     }
 
