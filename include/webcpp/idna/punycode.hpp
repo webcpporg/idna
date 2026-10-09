@@ -298,6 +298,8 @@ namespace punycode {
 
  Basic code points, below U+0080, are copied as they are, case included, and
  then a delimiter `-` when there is any; the digits that follow are lowercase.
+ The encoding stops when `output` is full, so its time grows at most with
+ the input's length times the size of `output`.
 
  @param output Where the characters are written; nothing is written past it.
  @param input The code points to encode.
@@ -331,6 +333,8 @@ namespace punycode {
  The code points before the last delimiter are copied as they are, case
  included, as RFC 3492's mixed-case annotation leaves them; the digits after
  it are read in either case. A delimiter at the very start consumes nothing.
+ At most the size of `output` code points are decoded, so the decoding's time
+ grows at most with the input's length times the size of `output`.
 
  @param output Where the code points are written; nothing is written past it.
  @param input The Punycode to decode.

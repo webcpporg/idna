@@ -47,9 +47,10 @@ idna::max_domain_length>` always holds it.
 
 `to_ascii(domain, opts, resource)` returns the same ASCII form as a
 `std::pmr::string`. With the DNS lengths verified, it reports the same first
-error as the span form, for every name: a label that outgrows the span form's
-working storage is too long for the DNS anyway, and both forms refuse it
-there (<<idna-limits-storage>>).
+error as a span form large enough to hold the result, for every name, and it
+is never `output_too_small`: a label that outgrows the span form's working
+storage is too long for the DNS anyway, and both forms refuse it there
+(<<idna-limits-storage>>).
 
 [#idna-converting-to-unicode]
 === To Unicode
@@ -73,9 +74,9 @@ nothing, and is `invalid_utf8`.
 `to_unicode(domain, opts, resource)` returns an `idna::unicode_string`, the
 Unicode form as a `std::pmr::string` and the first error. It is never
 `output_too_small`, and the two forms differ only past the working storage,
-which the Unicode form, having no length to check, meets with the default
-options: the span form stops at a label beyond it, and the pmr form converts
-the label (<<idna-limits-storage>>).
+which the Unicode form, checking no label's maximum length, meets with the
+default options: the span form stops at a label beyond it, and the pmr form
+converts the label (<<idna-limits-storage>>).
 
 [#idna-converting-options]
 === Options

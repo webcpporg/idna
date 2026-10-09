@@ -324,9 +324,10 @@ void both_forms_report_the_same_error() {
 }
 
 /** A label's Punycode holds at most detail::max_punycode_code_points code points in the pmr forms:
-    the encoder's input, and the decoder's output, in to_ascii and to_unicode alike; one more is
-    punycode_overflow whatever options::ignore_invalid_punycode says, and the A-label is kept as it
-    is in the Unicode form. */
+    the encoder's input in to_ascii, and the decoder's output in to_ascii and to_unicode; one more
+    is punycode_overflow whatever options::ignore_invalid_punycode says, and the A-label is kept as
+    it is in the Unicode form. to_unicode encodes nothing, so a label past the bound that is not an
+    A-label is written as it is. */
 void the_bound_on_punycode() {
     constexpr std::size_t bound = idna::detail::max_punycode_code_points;
     static_assert(bound == 256, "the Doc Comments of the pmr forms state it");
@@ -353,6 +354,13 @@ void the_bound_on_punycode() {
         const idna::unicode_string refused = idna::to_unicode(a_label_of(beyond), opts);
         BOOST_TEST(refused.error == idna::error::punycode_overflow);
         BOOST_TEST(std::string_view(refused.value) == a_label_of(beyond));
+    }
+    for (const idna::options& opts : {idna::options(), no_lengths}) {
+        for (const std::u32string& text : {beyond, ideographs(300, 300)}) {
+            const idna::unicode_string written = idna::to_unicode(utf8_of(text), opts);
+            BOOST_TEST(!written.error);
+            BOOST_TEST(std::string_view(written.value) == utf8_of(text));
+        }
     }
 }
 

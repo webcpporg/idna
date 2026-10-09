@@ -37,11 +37,11 @@ what meets it depends on the length check:
 * Without it, the span form of `to_ascii` and the validators return
   `storage_exhausted`, and the pmr form of `to_ascii` takes the label's
   storage from its memory resource.
-* `to_unicode` checks no length, and meets such a label with any options:
-  its span form stops there with `storage_exhausted`, and its pmr form
-  converts the label, within Punycode's bound (below). The difference is by
-  design: a span form allocates nothing, and the label is no name the DNS
-  can hold.
+* `to_unicode` checks no label's or name's maximum length, and meets such a
+  label with any options: its span form stops there with
+  `storage_exhausted`, and its pmr form converts the label, an A-label
+  within Punycode's bound (below). The difference is by design: a span form
+  allocates nothing, and the label is no name the DNS can hold.
 
 The storage fills while a label is gathered, before any of the label's
 checks, so a label beyond it reports that first: U+FFFF followed by 300 `a`
@@ -56,28 +56,37 @@ ends with the last label written before the long one: a name of the labels
 Punycode's work grows with the square of a label's length: RFC 3492's
 encoder passes over the label once for each distinct code point, and its
 decoder inserts each code point among those before it. The conversions bound
-it at 256 code points, the working storage's: a label of more than 256 code
-points that is not ASCII, or an A-label whose Punycode decodes to more, is
-`punycode_overflow`, whatever `ignore_invalid_punycode` says, since a limit of
-the implementation is no invalid Punycode. Only a pmr form meets the bound,
-`to_ascii` without the DNS lengths and `to_unicode` with any options, since
-a span form refuses such a label as beyond its storage first; at the bound,
-the worst label costs about 4 times one as long that Punycode handles in
-linear time, measured at `-O2`.
+it at 256 code points, the working storage's, and Punycode past the bound is
+`punycode_overflow` whatever `ignore_invalid_punycode` says, since a limit of
+the implementation is no invalid Punycode. `to_ascii` encodes, so a label of
+more than 256 code points that is not ASCII is `punycode_overflow` there.
+Both conversions decode, so an A-label whose Punycode decodes to more than
+256 code points is `punycode_overflow` in either, and kept as it is in the
+Unicode form. `to_unicode` encodes nothing: a long label that is not an
+A-label is written as it is. Only a pmr form meets the bound, `to_ascii`
+without the DNS lengths, and `to_unicode`, with any options, for an A-label,
+since a span form refuses such a label as beyond its storage first. At the
+bound, the worst label costs about 4 times one as long that Punycode handles
+in linear time, measured at `-O2`.
 
 `punycode::encode` and `punycode::decode` are the primitive, and have no
 such bound: their pmr forms take input of any length, in time that grows
-with its square, so a program bounds the length of input it does not trust
-before it hands it to them.
+with its square, and their span forms stop when the caller's span is full,
+in time that grows at most with the input's length times the span's size. A
+program bounds the length of input it does not trust before it hands it to
+a pmr form.
 
 [#idna-limits-stack]
 === The stack
 
-The deepest call of idna, a conversion or a check of an A-label whose
-U-label holds more than 32 combining marks in a row, which the slow NFC
-check sorts by counting, runs within 11 KiB of stack, and the conversions
-and checks of an ordinary name, such as `+xn--bcher-kva.example+`, within
-8 KiB, a program's start and its `printf` included. Both were measured on
-wasm32-wasip2 and wasm32-wasip3 in a debug build (`-O0`), by shrinking the
-stack until the program trapped, against the 64 KiB a WebAssembly program
-gets by default. idna does not recurse.
+The deepest call of idna, a check of a label, or a conversion of an
+A-label, whose U-label holds more than 32 combining marks in a row, which the
+slow NFC check sorts by counting, ran in about 11 KiB of stack, and the
+conversions and checks of an ordinary name, such as
+`+xn--bcher-kva.example+`, in about 8 KiB, a program's start and its `printf`
+included, against the 64 KiB a WebAssembly program gets by default. These
+are measured figures, with no margin promised: a program built with
+wasi-sdk 34 in a debug build (`-O0 -g`) for wasm32-wasip2 and wasm32-wasip3,
+run by wasmtime 47 with a stack made smaller, 256 bytes at a time, until it
+trapped. Another compiler or version may need more. idna does not
+recurse.

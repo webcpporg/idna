@@ -107,9 +107,11 @@ public headers only `uts46.hpp` and `validity.hpp` reach it, with
 `options.hpp` cost nothing of them. The tables hold 147,324 bytes of data,
 and a program links only those it reads. A translation unit that includes
 `<webcpp/idna.hpp>` and calls `to_ascii`, compiled at `-O2`, takes about
-0.9 s of processor time and makes an object of 188 KB natively with Apple
-Clang 21, and about 1.2 s and 197 KB for wasm32-wasip2 with wasi-sdk 34,
-against 0.2 s and 0.1 s, and under 1 KB, for the same program without idna.
+0.7 s of processor time and makes an object of 188 KB natively with Apple
+Clang 21, and about 0.8 s and 197 KB for wasm32-wasip2 with wasi-sdk 34,
+against 0.14 s and 0.07 s, and under 1 KB, for the same program without
+idna. Each time is the least of fifteen compilations, user and system time,
+on an Apple M5 Max shared with other work.
 
 [#idna-unicode-moving]
 === Moving to another version of Unicode

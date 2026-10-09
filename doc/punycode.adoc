@@ -51,5 +51,7 @@ delimiter, since nothing precedes it, so `-9uc` is refused, as RFC 3492
 says: it is the A-label `+xn---9uc+`, which a careless decoder would read as
 `+xn--9uc+`. Each function has a second form that returns a `std::pmr` string
 from a memory resource (<<idna-allocation>>). Neither form bounds the length
-of its input, and the time of both grows with its square, so a program
-bounds input it does not trust (<<idna-limits-punycode>>).
+of its input: a pmr form's time grows with the square of it, and a span
+form's at most with the input's length times the span's size, so a program
+bounds input it does not trust before it hands it to a pmr form
+(<<idna-limits-punycode>>).
