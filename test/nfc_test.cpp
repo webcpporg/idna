@@ -20,6 +20,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "nfc_vectors.hpp"
 
@@ -189,7 +190,7 @@ void the_growing_edge() {
     BOOST_TEST(append_copies(label, capacity, U'a'));
     BOOST_TEST_EQ(resource.allocations(), 0U);
     BOOST_TEST(label.push_back(U'a'));
-    BOOST_TEST(resource.allocations() > 0);
+    BOOST_TEST_EQ(resource.allocations(), 1U);  // room for as many again, in one allocation
     BOOST_TEST_EQ(label.view().size(), capacity + 1);
 
     detail::growing_label crosses(resource);
@@ -259,43 +260,67 @@ std::u32string canonical_order(std::u32string text) {
     return text;
 }
 
-/** Canonical ordering of runs of every length around its thresholds, with and without a memory
-    resource: a resource is asked for storage only by a run longer than an inline label. */
+/** Canonical ordering of runs of every length around its thresholds, and of long runs at both
+    ends of a text: through a memory resource, asked for storage only by a run longer than an inline
+    label, and, for the texts an inline label holds, without one. */
 void long_runs_reordered() {
+    std::vector<std::u32string> texts;
     for (const std::size_t count : {2U, 31U, 32U, 33U, 250U, 256U, 257U, 1000U}) {
-        const std::u32string text = U"a" + marks(count) + U"b" + marks(5);
+        texts.push_back(U"a" + marks(count) + U"b" + marks(5));
+    }
+    texts.push_back(marks(40) + U"a" + marks(300) + U"b" + marks(33));
+    texts.push_back(marks(256) + U"a" + marks(33) + U"b" + marks(256));
+    for (const std::u32string& text : texts) {
         const std::u32string expected = canonical_order(text);
-
-        std::u32string without = text;
-        nfc::reorder(std::span<char32_t>(without));
-        BOOST_TEST(without == expected);
+        const bool long_run = nfc::longest_run(text) > detail::max_label_code_points;
 
         counting_resource resource;
         std::u32string with = text;
         nfc::reorder(std::span<char32_t>(with), resource);
         BOOST_TEST(with == expected);
-        BOOST_TEST_EQ(resource.allocations() != 0, count > detail::max_label_code_points);
+        BOOST_TEST_EQ(resource.allocations() != 0, long_run);
+
+        if (!long_run) {
+            std::u32string without = text;
+            nfc::reorder(std::span<char32_t>(without));
+            BOOST_TEST(without == expected);
+        }
     }
 }
 
+/** The nanoseconds of the fastest of three normalizations of `text` into a growing label. */
+long long fastest_of_three(std::u32string_view text) {
+    auto fastest = std::chrono::nanoseconds::max();
+    for (int i = 0; i < 3; ++i) {
+        detail::growing_label label(*std::pmr::new_delete_resource());
+        const auto start = std::chrono::steady_clock::now();
+        BOOST_TEST(normalize_into(label, text));
+        const auto elapsed = std::chrono::steady_clock::now() - start;
+        fastest = std::min(fastest, std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed));
+    }
+    return fastest.count();
+}
+
 /**
- A run of 40,000 non-starters in the order furthest from canonical, a block of class 230 before a
- block of class 220, normalized within a second: linear work takes tens of milliseconds there on
- every target, and an insertion sort, whose moves grow with the square of the run, takes seconds.
+ A run of non-starters in the order furthest from canonical, a block of class 230 before a block of
+ class 220, normalized in less than 20 times the time of a text as long without a non-starter, the
+ fastest of three runs each: linear work keeps that ratio near 1 on any machine, and an insertion
+ sort, whose moves grow with the square of the run, takes it to hundreds.
 */
 void long_runs_in_linear_time() {
-    constexpr std::size_t half = 20000;
-    const std::u32string text =
+    constexpr std::size_t half = 5000;
+    const std::u32string hostile =
         U"a" + std::u32string(half, U'\u0301') + std::u32string(half, U'\u0316');
     detail::growing_label label(*std::pmr::new_delete_resource());
-    const auto start = std::chrono::steady_clock::now();
-    BOOST_TEST(normalize_into(label, text));
-    const auto elapsed = std::chrono::steady_clock::now() - start;
-    BOOST_TEST(elapsed < std::chrono::seconds(1));
+    BOOST_TEST(normalize_into(label, hostile));
     // a with U+0301 composes past the U+0316 run, which is of a lower class.
     const std::u32string expected =
         U"\u00E1" + std::u32string(half, U'\u0316') + std::u32string(half - 1, U'\u0301');
     BOOST_TEST(label.view() == expected);
+
+    const long long baseline = fastest_of_three(std::u32string(hostile.size(), U'a'));
+    const long long measured = fastest_of_three(hostile);
+    BOOST_TEST_LT(measured, 20 * baseline);
 }
 
 }  // namespace

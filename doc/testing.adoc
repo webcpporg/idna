@@ -62,8 +62,8 @@ target the Jamfile declares:
   NormalizationTest.txt, its quick check and its slow path, Hangul, and the
   storage, inline and growing: its edge after decomposition, at the
   capacity and one past it, canonical ordering against a stable sort, and a
-  run of 40,000 non-starters normalized in a time an insertion sort exceeds
-  by far.
+  run of 10,000 non-starters normalized in less than 20 times the time of a
+  text as long without one, which an insertion sort exceeds by far.
 
 | `context`, `bidi`
 | Each rule of RFC 5892 appendix A and of RFC 5893 section 2, satisfied and

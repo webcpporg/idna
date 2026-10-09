@@ -13,6 +13,8 @@
 
 #include <webcpp/idna/config.hpp>
 
+#include <boost/assert.hpp>
+
 #include <array>
 #include <cstddef>
 #include <memory_resource>
@@ -49,7 +51,10 @@ public:
     }
 
     /** Keeps the first `size` code points, `size` being at most the current size. */
-    void shrink(std::size_t size) noexcept { size_ = size; }
+    void shrink(std::size_t size) noexcept {
+        BOOST_ASSERT(size <= size_);
+        size_ = size;
+    }
 
     /** Removes every code point. */
     void clear() noexcept { size_ = 0; }
@@ -63,6 +68,7 @@ public:
     /** Makes the label `size` code points long, their values unspecified, for a decoder to
         write; `size` is at most the inline capacity. */
     [[nodiscard]] std::span<char32_t> reset(std::size_t size) noexcept {
+        BOOST_ASSERT(size <= data_.size());
         size_ = size;
         return span();
     }
@@ -101,6 +107,8 @@ public:
             return true;
         }
         if (!spilled_) {
+            // Room for as many again, so that the push_back below does not allocate a second time.
+            spill_.reserve(2 * inline_.size());
             spill_.assign(inline_.begin(), inline_.end());
             spilled_ = true;
         }
@@ -110,6 +118,7 @@ public:
 
     /** Keeps the first `size` code points, `size` being at most the current size. */
     void shrink(std::size_t size) noexcept {
+        BOOST_ASSERT(size <= view().size());
         if (spilled_) {
             spill_.erase(spill_.begin() + static_cast<std::ptrdiff_t>(size), spill_.end());
         } else {

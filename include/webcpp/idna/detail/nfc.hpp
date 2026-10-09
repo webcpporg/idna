@@ -23,10 +23,14 @@
 #include <webcpp/idna/detail/label_buffer.hpp>
 #include <webcpp/idna/detail/properties.hpp>
 
+#include <boost/assert.hpp>
+#include <boost/config.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory_resource>
 #include <numeric>
 #include <span>
@@ -55,7 +59,7 @@ inline constexpr char32_t n_count = v_count * t_count;
 inline constexpr char32_t s_count = l_count * n_count;
 
 /** Appends the full canonical decomposition of `cp` to `label`, or returns false when the label's
-    storage is full. */
+    storage is full, the label's contents being unspecified then. */
 template <class Label>
 [[nodiscard]] bool append_decomposed(Label& label, char32_t cp) {
     if (cp >= s_base && cp < s_base + s_count) {
@@ -96,9 +100,14 @@ inline void insertion_sort(std::span<char32_t> run) noexcept {
     }
 }
 
-/** Sorts the non-starters `run` stably by combining class through `buffer`, at least as long as
-    the run: a counting sort over the 256 classes. */
-inline void counting_sort(std::span<char32_t> run, std::span<char32_t> buffer) noexcept {
+/**
+ Sorts the non-starters `run` stably by combining class through `buffer`, at least as long as the
+ run: a counting sort over the 256 classes.
+
+ Tip: never inlined, so that its counts are on the stack only while a long run is sorted.
+*/
+BOOST_NOINLINE inline void counting_sort(std::span<char32_t> run,
+                                         std::span<char32_t> buffer) noexcept {
     // Once summed, next[c] is where the next code point of class c goes.
     std::array<std::size_t, 257> next{};
     for (const char32_t cp : run) {
@@ -112,11 +121,45 @@ inline void counting_sort(std::span<char32_t> run, std::span<char32_t> buffer) n
 }
 
 /**
- Puts every run of non-starters of `text` in canonical order, a stable sort by combining class,
- through `buffer`: by counting, a run longer than max_insertion_run that `buffer` holds, and by
- insertion, every other.
+ Sorts the non-starters `run`, at most as long as an inline label, by counting through a buffer on
+ the stack.
+
+ Tip: never inlined, so that the buffer is on the stack only while such a run is sorted, and not in
+ the frame of every normalization.
 */
-inline void reorder_through(std::span<char32_t> text, std::span<char32_t> buffer) noexcept {
+BOOST_NOINLINE inline void counting_sort_on_stack(std::span<char32_t> run) noexcept {
+    std::array<char32_t, max_label_code_points> buffer{};
+    counting_sort(run, buffer);
+}
+
+/**
+ Sorts the non-starters `run` stably by combining class: by insertion up to max_insertion_run, by
+ counting through the stack up to an inline label's length, and by counting through `spill` beyond,
+ which only a growing label lends, as long as its longest run.
+
+ Tip: a run longer than `spill` breaks that precondition, which an assertion states; a build without
+ assertions sorts it by insertion, correct and in a time that grows with its square.
+*/
+inline void sort_run(std::span<char32_t> run, std::span<char32_t> spill) noexcept {
+    if (run.size() <= max_insertion_run) {
+        insertion_sort(run);
+        return;
+    }
+    if (run.size() <= max_label_code_points) {
+        counting_sort_on_stack(run);
+        return;
+    }
+    BOOST_ASSERT(run.size() <= spill.size());
+    if (run.size() <= spill.size()) {
+        counting_sort(run, spill);
+        return;
+    }
+    insertion_sort(run);
+}
+
+/** Puts every run of non-starters of `text` in canonical order, a stable sort by combining class,
+    with `spill` for a run longer than an inline label (@ref sort_run). */
+inline void reorder_through(std::span<char32_t> text, std::span<char32_t> spill) noexcept {
     std::size_t begin = 0;
     while (begin < text.size()) {
         if (combining_class_of(text[begin]) == 0) {
@@ -127,26 +170,15 @@ inline void reorder_through(std::span<char32_t> text, std::span<char32_t> buffer
         while (end < text.size() && combining_class_of(text[end]) != 0) {
             ++end;
         }
-        const std::span<char32_t> run = text.subspan(begin, end - begin);
-        if (run.size() > max_insertion_run && run.size() <= buffer.size()) {
-            counting_sort(run, buffer);
-        } else {
-            insertion_sort(run);
-        }
+        sort_run(text.subspan(begin, end - begin), spill);
         begin = end;
     }
 }
 
-/**
- Puts every run of non-starters of `text` in canonical order, through a buffer on the stack as long
- as an inline label, which holds every run of one.
-
- Tip: a longer run is sorted by insertion, in a time that grows with its square, so the code points
- of a growing label go through the overload that takes its memory resource.
-*/
+/** Puts every run of non-starters of `text`, none longer than an inline label, as in an inline
+    label, in canonical order; a longer run is a broken precondition (@ref sort_run). */
 inline void reorder(std::span<char32_t> text) noexcept {
-    std::array<char32_t, max_label_code_points> buffer{};
-    reorder_through(text, buffer);
+    reorder_through(text, {});
 }
 
 /** The length of the longest run of non-starters of `text`. */
@@ -190,14 +222,16 @@ inline std::size_t compose(std::span<char32_t> text) noexcept {
     if (text.empty()) {
         return 0;
     }
-    std::size_t starter = 0;
-    // 256 for a text that starts with a non-starter, which then composes with nothing.
-    int last_class = combining_class_of(text[0]) == 0 ? 0 : 256;
+    // A text that starts with non-starters has no starter until its first one: they compose with
+    // nothing.
+    constexpr std::size_t no_starter = std::numeric_limits<std::size_t>::max();
+    std::size_t starter = combining_class_of(text[0]) == 0 ? 0 : no_starter;
+    int last_class = 0;
     std::size_t written = 1;
     for (std::size_t i = 1; i < text.size(); ++i) {
         const char32_t cp = text[i];
         const int cc = combining_class_of(cp);
-        const char32_t composite = compose_pair(text[starter], cp);
+        const char32_t composite = starter == no_starter ? 0 : compose_pair(text[starter], cp);
         if (composite != 0 && (last_class < cc || last_class == 0)) {
             text[starter] = composite;
             continue;
