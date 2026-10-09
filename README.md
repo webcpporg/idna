@@ -17,6 +17,48 @@ namespace `webcpp::idna`. idna needs Boost's headers and nothing to build or
 link. It runs natively, on wasm32-wasip2 and wasm32-wasip3, and with
 Emscripten.
 
+## A minimal example
+
+This is [example/idna_quick_start.cpp](example/idna_quick_start.cpp), which
+converts two names to their ASCII form and an A-label back to Unicode:
+
+<!-- include::example/idna_quick_start.cpp[tag=program] -->
+```cpp
+#include <webcpp/idna.hpp>
+
+#include <array>
+#include <iostream>
+#include <string_view>
+
+namespace idna = webcpp::idna;
+
+int main() {
+    std::array<char, idna::max_domain_length> ascii{};
+    for (const std::string_view name : {"B\303\274cher.Example", "a\302\267b.example"}) {
+        const idna::result<std::size_t> converted = idna::to_ascii(ascii, name);
+        if (converted.has_error()) {
+            std::cout << name << " -> error: " << converted.error().message() << '\n';
+            continue;
+        }
+        std::cout << name << " -> " << std::string_view(ascii.data(), converted.value()) << '\n';
+    }
+
+    std::array<char, 1024> unicode{};
+    const idna::unicode_result shown = idna::to_unicode(unicode, "xn--bcher-kva.example");
+    std::cout << std::string_view(unicode.data(), shown.size)
+              << (shown.error ? " (with an error)" : "") << '\n';
+}
+```
+
+It prints:
+
+<!-- include::example/idna_quick_start.expected[] -->
+```
+Bücher.Example -> xn--bcher-kva.example
+a·b.example -> error: code point outside its allowed context
+bücher.example
+```
+
 ## Building and testing
 
 idna is developed inside the webcpp superproject, as a Boost library is
@@ -38,6 +80,12 @@ do the same for WebAssembly. A b2 project uses idna through
 idna's page, with its API reference, is published at
 <https://webcpporg.github.io/webcpp/libs/idna/>; `b2 libs/idna/doc` builds
 it into `doc/html/index.html`.
+
+## Unicode data
+
+idna's tables and the vectors of its tests are derived from Unicode's data
+files, under the Unicode License v3, whose notice is the appendix "Unicode
+data" of idna's page. idna's code is under the Boost Software License alone.
 
 ## License
 

@@ -11,8 +11,9 @@
 === How idna is tested
 
 idna's tests are lightweight_test programs, one per subject, under `test/`,
-each declared in `test/Jamfile` with webcpp's `webcpp.run`, and run on every
-target the Jamfile declares:
+each declared in `test/Jamfile` with webcpp's `webcpp.run`. Every vector of
+the conformance files is compiled into its test, so no test reads a file,
+and every test runs on every target.
 
 [cols="1,3",options="header"]
 |===
@@ -39,11 +40,6 @@ target the Jamfile declares:
   RFC 3492 section 6.4, in the decoder and the encoder; `output_too_small` at
   every length below the result's; the pmr forms.
 
-| `allocation`
-| The global `operator new`, replaced for this program alone: no call in a
-  span form or a validator, and in a pmr form only those of its memory
-  resource.
-
 | `properties`
 | One value of every generated table, through its lookup.
 
@@ -59,7 +55,7 @@ target the Jamfile declares:
   unlisted line that fails.
 
 | `nfc`
-| NFC within a label's storage against every line of
+| NFC within a label's storage against all {n-nfc-vectors} lines of
   NormalizationTest.txt, its quick check and its slow path, Hangul, and the
   storage, inline and growing: its edge after decomposition, at the
   capacity and one past it, canonical ordering against a stable sort, and a
@@ -77,9 +73,9 @@ target the Jamfile declares:
   decodes to nothing, a label beyond the storage after an earlier error,
   gathered or in the NFC check's copy, and the empty labels, the root label
   among them, an undecodable label kept, and the ASCII form as given; and
-  that it throws only what a memory resource throws. Like
-  every test, built with the standard library's own checks on, so that a
-  read past an empty label traps.
+  that it throws only what a memory resource throws. Like every test, built
+  with the standard library's own checks on, so that a read past an empty
+  label traps.
 
 | `validity`
 | `check_label` and `check_domain`: every rule with its error, and of two
@@ -95,37 +91,80 @@ target the Jamfile declares:
   form, has the verdict the file gives it.
 
 | `uts46`
-| Every line of IdnaTestV2.txt, toUnicode, toAsciiN and toAsciiT, in the
-  span and the pmr forms, under UTS 46 alone as the file assumes, then the
-  strict profile over the lines whose toUnicode field holds no NV8, XV8 or
-  CONTEXTO code point; and the orders of the errors, the same in both forms
-  under the DNS lengths. Then the pmr forms' bound on a label's Punycode,
-  256 code points: the decoder stops at it, so an A-label of 300 code points
-  followed by a character that is no digit is `punycode_overflow`, where a
-  decoder that read it whole would find the character first; and a label of
-  16,384 distinct ideographs is refused in less than 10 times the time of a
-  label as long of one, which the unbounded encoder exceeds by far.
+| All {n-idna-test-v2} lines of IdnaTestV2.txt, toUnicode, toAsciiN and
+  toAsciiT, in the span and the pmr forms, under UTS 46 alone as the file
+  assumes, then the strict profile over the lines whose toUnicode field
+  holds no NV8, XV8 or CONTEXTO code point; and the orders of the errors,
+  the same in both forms under the DNS lengths. Then the pmr forms' bound on
+  a label's Punycode, 256 code points: the decoder stops at it, so an
+  A-label of 300 code points followed by a character that is no digit is
+  `punycode_overflow`, where a decoder that read it whole would find the
+  character first; and a label of 16,384 distinct ideographs is refused in
+  less than 10 times the time of a label as long of one, which the unbounded
+  encoder exceeds by far.
+
+| `allocation`
+| The global `operator new`, replaced for this program alone: no call in a
+  span form or a validator, and in a pmr form only those of its memory
+  resource (<<idna-invariant-1>>).
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,
 and `config.hpp` twice, as the build asks and with
 `WEBCPP_IDNA_NO_EXCEPTIONS` defined by the developer. `example/Jamfile`
 builds every program this page shows, runs it, and compares what it printed
-with the `.expected` beside it. The own lane `tables`,
-`b2 -a libs/idna/test//tables`, checks the generated files against the
-generator (<<idna-unicode-generator>>).
+with the `.expected` beside it.
+
+[#idna-testing-conformance]
+=== Conformance, and known failures
+
+IdnaTestV2.txt is UTS 46's own conformance file. idna passes every line of
+it, which `test/known_failures.json` records as an empty list: a line listed
+there must fail in the pass under UTS 46 alone, which the strict pass then
+leaves out, and every other line must pass, so the list never lies. The one
+kind of entry it may hold is a line that fails because of a difference
+between two versions of Unicode, the file's and the tables', with a reason
+that names both. The lines with a lone surrogate, which no UTF-8 string
+holds, are refused as `invalid_utf8`, as the file allows. JSON Schema's own
+tests of `hostname` and `idn-hostname` run in `webcpp::formats`, against the
+formats it builds on idna.
 
 [#idna-testing-targets]
 === Targets and exceptions
 
-`test/Jamfile` declares `webcpp.targets native wasip2 wasip3 emscripten`:
-natively with any toolset, for wasm32-wasip2 and wasm32-wasip3 with the
-toolsets `clang-wasip2` and `clang-wasip3` run by wasmtime, and with
-Emscripten run by Node.
+`test/Jamfile` and `example/Jamfile` declare `webcpp.targets native wasip2
+wasip3 emscripten`, and b2 builds each program for those alone: natively
+with any toolset, for wasm32-wasip2 and wasm32-wasip3 with the toolsets
+`clang-wasip2` and `clang-wasip3` run by wasmtime, and with Emscripten run
+by Node.
 
 `<webcpp/idna/config.hpp>`, which every public header includes first,
 defines `WEBCPP_IDNA_NO_EXCEPTIONS` when the build has no exceptions, and a
 program may define it itself, as Boost.Asio's `BOOST_ASIO_NO_EXCEPTIONS`.
 idna raises no exception of its own, so the macro changes nothing in it: it
 exists so that a program can set it for every webcpp library alike. The
-lint compiles every header and test a second time without exceptions.
+lint compiles every header, test and example a second time without
+exceptions.
+
+From the root of a webcpp checkout:
+
+`b2 libs/idna/test`::
+The {n-tests-native} tests, natively.
+
+`b2 libs/idna/example`::
+The {n-examples} examples, each built, run, and its output compared.
+
+`b2 libs/idna/test libs/idna/example toolset=clang-wasip2 testing.launcher=wasmtime`::
+The same for wasm32-wasip2: {n-tests-wasip2} tests and {n-examples-wasip2}
+examples. `toolset=clang-wasip3` does the same for wasm32-wasip3.
+
+`b2 libs/idna/test libs/idna/example toolset=emscripten`::
+The same with Emscripten, whose programs b2 runs with Node itself:
+{n-tests-emscripten} tests and {n-examples-emscripten} examples.
+
+`b2 -a libs/idna/test//tables`::
+The own lane `tables`: the generator again, its outputs compared with the
+committed files (<<idna-unicode-generator>>).
+
+The test matrix of every lane is at
+https://webcpporg.github.io/webcpp/report/.

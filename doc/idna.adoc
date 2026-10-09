@@ -44,6 +44,8 @@ include::limits.adoc[]
 
 include::unicode.adoc[]
 
+include::guarantees.adoc[]
+
 include::testing.adoc[]
 
 [#reference]

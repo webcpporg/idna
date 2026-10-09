@@ -1,0 +1,25 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#idna-guarantees]
+== Guarantees
+
+Each guarantee keeps its number and its anchor; code, tests and comments cite
+them.
+
+. [[idna-invariant-1,guarantee 1]]No span form of a conversion and no validator
+  allocates, whatever its input; a pmr form allocates from its memory
+  resource alone.
+. [[idna-invariant-2,guarantee 2]]Nothing throws but the allocation of a memory resource
+  a pmr form was given.
+. [[idna-invariant-3,guarantee 3]]The same input and options give the same output and
+  the same error on every target.
+. [[idna-invariant-4,guarantee 4]]With `verify_dns_length`, `to_ascii` returns at most
+  `idna::max_domain_length` chars, and reports a longer name as
+  `domain_too_long`, never as `output_too_small` in a buffer of that size;
+  after an error, a span form's buffer holds nothing to read.
+. [[idna-invariant-5,guarantee 5]]The tables are exactly what `tools/generate_tables.py`
+  writes from the pinned Unicode {unicode-version} files.

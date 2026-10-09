@@ -56,4 +56,4 @@ The test `allocation` replaces the global `operator new` for itself alone
 and counts: no call in any span form or validator, over long names, long
 labels and every kind of failure, with the strict profile, UTS 46 alone and
 the DNS lengths off, and in the pmr forms, exactly the calls of their memory
-resource.
+resource (<<idna-invariant-1>>).
