@@ -46,9 +46,11 @@ namespace webcpp::idna {
  @param opts The processing's flags; the defaults are the strict profile.
  @return The number of chars written, or the first @ref error found, a
  label's in their order, then @ref error::bidi, @ref error::domain_too_long,
- and @ref error::output_too_small last.
+ and @ref error::output_too_small last. @ref error::storage_exhausted for a
+ label beyond the inline storage when `opts.verify_dns_length` is off.
  @note After an error, the contents of `output` are unspecified.
  @see "Converting names", in the guide.
+ @see "Limits", in the guide.
 */
 [[nodiscard]] inline result<std::size_t> to_ascii(std::span<char> output, std::string_view domain,
                                                   const options& opts = options()) noexcept {
@@ -122,8 +124,11 @@ struct unicode_result {
  at a code point boundary when it is full.
  @param domain The domain name, in UTF-8; ill-formed UTF-8 writes nothing.
  @param opts The processing's flags; the defaults are the strict profile.
- @return What was written, and the first error recorded.
+ @return What was written, and the first error recorded; a label beyond the
+ inline storage stops the writing there with @ref error::storage_exhausted,
+ after any earlier label's error.
  @see "Converting names", in the guide.
+ @see "Limits", in the guide.
 */
 [[nodiscard]] inline unicode_result to_unicode(std::span<char> output, std::string_view domain,
                                                const options& opts = options()) noexcept {

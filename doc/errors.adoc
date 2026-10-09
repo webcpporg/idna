@@ -14,9 +14,12 @@ always converts what it can, a struct whose `error` is a
 the values of `idna::error`, of the category `webcpp.idna`, one per family
 of rules rather than one per status code of UTS{nbsp}46: IdnaTestV2, Unicode's
 own conformance file, says an implementation "need only record that there
-is an error". The first error found is the one reported: the labels are
-processed in order, and the checks of a label in the order UTS{nbsp}46 section 4.1
-lists them, IDNA2008's last.
+is an error". The first error found is the one reported, but for
+`output_too_small`: `to_ascii` reports it last, after every label's error,
+`bidi` and `domain_too_long`, and the span form of `to_unicode` lets it
+replace an earlier error (<<idna-converting>>). The labels are processed in
+order, and the checks of a label in the order UTS{nbsp}46 section 4.1 lists
+them, IDNA2008's last.
 
 [cols="1,3,3,3",options="header"]
 |===

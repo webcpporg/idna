@@ -74,8 +74,11 @@ namespace webcpp::idna {
  @param domain The domain name.
  @param opts The checks to apply; the defaults are the strict profile.
  @return Nothing, or the first @ref error found: the labels' in their order,
- then @ref error::bidi, then @ref error::domain_too_long.
+ then @ref error::bidi, then @ref error::domain_too_long. @ref
+ error::storage_exhausted for a label beyond the inline storage when
+ `opts.verify_dns_length` is off.
  @see "Validity", in the guide.
+ @see "Limits", in the guide.
 */
 [[nodiscard]] inline result<void> check_domain(std::string_view domain,
                                                const options& opts = options()) noexcept {

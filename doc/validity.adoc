@@ -29,8 +29,9 @@ again: an A-label that is not the encoding of its U-label, its letters
 compared in lowercase, is refused, as RFC{nbsp}5891 section 5.4 asks. Each
 failure of the A-label itself, a code point beyond ASCII, Punycode that does
 not decode, P4 or the round trip, is `invalid_punycode`, or
-`punycode_overflow` for a number past 32 bits. Under `ignore_invalid_punycode`, a label whose Punycode does not
-decode is kept as it is, and only its length is checked.
+`punycode_overflow` for a number past 32 bits. Under
+`ignore_invalid_punycode`, a label whose Punycode does not decode is kept as
+it is, and only its length is checked.
 
 `check_label` refuses a U+002E inside its label as `disallowed`, and applies
 the Bidi rule to its label as to a name of one label. `check_domain` splits

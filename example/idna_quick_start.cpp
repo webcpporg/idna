@@ -14,7 +14,6 @@
 namespace idna = webcpp::idna;
 
 int main() {
-    // tag::to_ascii[]
     std::array<char, idna::max_domain_length> ascii{};
     for (const std::string_view name : {"B\303\274cher.Example", "a\302\267b.example"}) {
         const idna::result<std::size_t> converted = idna::to_ascii(ascii, name);
@@ -24,14 +23,11 @@ int main() {
         }
         std::cout << name << " -> " << std::string_view(ascii.data(), converted.value()) << '\n';
     }
-    // end::to_ascii[]
 
-    // tag::to_unicode[]
     std::array<char, 1024> unicode{};
     const idna::unicode_result shown = idna::to_unicode(unicode, "xn--bcher-kva.example");
     std::cout << std::string_view(unicode.data(), shown.size)
               << (shown.error ? " (with an error)" : "") << '\n';
-    // end::to_unicode[]
 }
 
 // end::program[]
