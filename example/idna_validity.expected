@@ -1,0 +1,10 @@
+example: valid
+xn--bcher-kva: valid
+l·l: valid
+a·l: code point outside its allowed context
+ab--cd: hyphens in the third and fourth positions
+Example: disallowed code point
+a.א: valid
+0a.א: invalid
+0a.b: valid
+a·l under UTS 46 alone: valid

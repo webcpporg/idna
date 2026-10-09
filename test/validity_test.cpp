@@ -281,6 +281,7 @@ void the_first_error_wins() {
     refuses("a_b." + std::string(300, 'a'), idna::error::not_ldh);
     const std::string four_labels_63 = repeated(std::string(63, 'a'), 4);
     refuses("0a.\327\220." + four_labels_63, idna::error::bidi);
+    refuses("0a.\327\220." + std::string(64, 'a'), idna::error::label_too_long);
     refuses("0a.\327\220." + four_labels_63, idna::error::domain_too_long,
             idna::options{.check_bidi = false});
     refuses("a_b." + std::string(300, 'a'), idna::error::not_ldh,

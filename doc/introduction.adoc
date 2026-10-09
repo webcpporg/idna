@@ -52,6 +52,9 @@ namespace `webcpp::idna`, and Punycode's in `webcpp::idna::punycode`:
 
 | `<webcpp/idna/punycode.hpp>`
 | `punycode::encode` and `punycode::decode` (<<idna-punycode>>).
+
+| `<webcpp/idna/validity.hpp>`
+| `check_label`, `check_domain` and their `is_valid_` forms (<<idna-validity>>).
 |===
 
 [#idna-requirements]
