@@ -57,6 +57,14 @@ target the Jamfile declares:
   `webcpp.run-fail`, it must fail on a listed line that passes and on an
   unlisted line that fails.
 
+| `nfc`
+| NFC within a label's storage against every line of
+  NormalizationTest.txt, its quick check and its slow path, Hangul, and the
+  storage, inline and growing: its edge after decomposition, at the
+  capacity and one past it, canonical ordering against a stable sort, and a
+  run of 40,000 non-starters normalized in a time an insertion sort exceeds
+  by far.
+
 | `context`, `bidi`
 | Each rule of RFC 5892 appendix A and of RFC 5893 section 2, satisfied and
   broken, the joining scripts a hand-written list misses among them, and
