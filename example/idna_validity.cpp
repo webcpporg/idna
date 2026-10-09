@@ -13,6 +13,7 @@ namespace idna = webcpp::idna;
 
 int main() {
     // tag::labels[]
+    // "\302\267" is U+00B7 MIDDLE DOT in UTF-8, which RFC 5892 allows only between two 'l'.
     for (const std::string_view label :
          {"example", "xn--bcher-kva", "l\302\267l", "a\302\267l", "ab--cd", "Example"}) {
         const idna::result<void> checked = idna::check_label(label);
@@ -22,6 +23,7 @@ int main() {
     // end::labels[]
 
     // tag::domains[]
+    // "\327\220" is U+05D0 HEBREW LETTER ALEF in UTF-8, a right-to-left letter.
     for (const std::string_view domain : {"a.\327\220", "0a.\327\220", "0a.b"}) {
         std::cout << domain << ": " << (idna::is_valid_domain(domain) ? "valid" : "invalid")
                   << '\n';

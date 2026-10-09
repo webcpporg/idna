@@ -273,7 +273,8 @@ std::string repeated(std::string_view label, std::size_t count) {
     return domain;
 }
 
-/** A name with several faults reports its first label's, before the Bidi rule and the lengths. */
+/** A name with several faults reports its first label's, before the Bidi rule and the name's
+    length; a label longer than the working storage is refused before its rules. */
 void the_first_error_wins() {
     refuses("a_b.xn--zz", idna::error::not_ldh);
     refuses("xn--zz.a_b", idna::error::invalid_punycode);
@@ -282,6 +283,9 @@ void the_first_error_wins() {
     const std::string four_labels_63 = repeated(std::string(63, 'a'), 4);
     refuses("0a.\327\220." + four_labels_63, idna::error::bidi);
     refuses("0a.\327\220." + std::string(64, 'a'), idna::error::label_too_long);
+    BOOST_TEST(idna::check_label("a_" + std::string(62, 'a')).error() == idna::error::not_ldh);
+    BOOST_TEST(idna::check_label("a_" + std::string(300, 'a')).error() ==
+               idna::error::label_too_long);
     refuses("0a.\327\220." + four_labels_63, idna::error::domain_too_long,
             idna::options{.check_bidi = false});
     refuses("a_b." + std::string(300, 'a'), idna::error::not_ldh,
