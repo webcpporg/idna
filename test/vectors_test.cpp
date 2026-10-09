@@ -61,6 +61,14 @@ void each_blank_field_takes_its_value() {
         BOOST_TEST_EQ(line->to_unicode, std::string_view("fa\303\237.de"));
         BOOST_TEST_EQ(line->to_ascii_t, std::string_view("xn--fa-hia.de"));
     }
+    // 153, "a<U+200C>b; ; [C1]; xn--ab-j1t; ; ab; []": an explicit [] is no error, though
+    // toAsciiNStatus inherits [C1]; transitional processing drops the ZWNJ.
+    if (const idna_vector* line = row_of(153)) {
+        BOOST_TEST(line->to_unicode_error);
+        BOOST_TEST(line->to_ascii_n_error);
+        BOOST_TEST(!line->to_ascii_t_error);
+        BOOST_TEST_EQ(line->to_ascii_t, std::string_view("ab"));
+    }
     // 209, an A-label of 64 octets: toAsciiTStatus is toAsciiNStatus, [A4_2], not
     // toUnicodeStatus.
     if (const idna_vector* line = row_of(209)) {

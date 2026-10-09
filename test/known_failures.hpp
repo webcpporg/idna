@@ -28,11 +28,13 @@ inline bool as_listed(std::uint32_t line, std::string_view known_failure, bool p
     if (passed == known_failure.empty()) {
         return true;
     }
-    // A line that fails is not listed, so its reason is empty.
     std::string what = "IdnaTestV2.txt line " + std::to_string(line);
-    what += passed ? " passes, and test/known_failures.json lists it: "
-                   : " fails, and test/known_failures.json does not list it";
-    what += known_failure;
+    if (passed) {
+        what += " passes, and test/known_failures.json lists it: ";
+        what += known_failure;
+    } else {
+        what += " fails, and test/known_failures.json does not list it";
+    }
     BOOST_ERROR(what.c_str());
     return false;
 }

@@ -133,5 +133,6 @@ version, in this order:
   `meta/libraries.json`, the first paragraph of `README.md`, and the section
   "Unicode and the tables" of `AGENTS.md`.
 . Every lane, and the known failures of `test/known_failures.json` brought
-  up to date, each with its reason.
+  up to date, each with its reason, and the generator run again, which
+  writes each reason into its row.
 . The changelog, in a line that names the new version.

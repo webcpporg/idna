@@ -133,6 +133,8 @@ IDNA_TEST_FIELDS = 7
 STATUS_CODE = re.compile(r'[PVABCX][0-9]+(?:_[0-9]+)?|U1')
 ESCAPE = re.compile(r'\\u([0-9A-Fa-f]{4})')
 NORMALIZATION_TEST_COLUMNS = 5
+BIDI_CONTROLS = frozenset({*range(0x202A, 0x202F), *range(0x2066, 0x206A)})
+BIDI_CHECK = 'misc-misleading-bidirectional'
 POSITIONAL_ROWS = ('modernize-use-designated-initializers',
                    'The rows are positional, as designated initializers would double the file.')
 
@@ -644,7 +646,7 @@ def idna_vectors(version: str, text: str, mapping: Mapping, failures_path: Path)
     """The text of test/generated/idna_test_v2.ipp: one row per line of IdnaTestV2.txt, its blank
     fields resolved as the file's header says."""
     parsed: list[tuple[int, list[str]]] = []
-    for number, line in enumerate(text.splitlines(), start=1):
+    for number, line in enumerate(text.split('\n'), start=1):
         body = line.split('#', 1)[0]
         if not body.strip():
             continue
@@ -666,24 +668,28 @@ def idna_vectors(version: str, text: str, mapping: Mapping, failures_path: Path)
         ascii_t_error = has_error(fields[6], where) if fields[6] else ascii_n_error
         strict = not any(mapping.marked[ord(char)] or ord(char) in CONTEXTO
                          for char in to_unicode)
-        out.append('    idna_vector{' + ', '.join([
+        reason = failures.get(number, '')
+        exempt = any(ord(char) in BIDI_CONTROLS
+                     for char in source + to_unicode + to_ascii_n + to_ascii_t + reason)
+        out.append((f'    // NOLINTNEXTLINE({BIDI_CHECK})\n' if exempt else '')
+                   + '    idna_vector{' + ', '.join([
             str(number), utf8_literal(source), utf8_literal(to_unicode),
             str(unicode_error).lower(), utf8_literal(to_ascii_n), str(ascii_n_error).lower(),
             utf8_literal(to_ascii_t), str(ascii_t_error).lower(), str(strict).lower(),
-            utf8_literal(failures.get(number, '')),
+            utf8_literal(reason),
         ]) + '},')
     return vector_file(version, 'IdnaTestV2.txt, a row per test line', 'idna_vector',
-                       'idna_vectors', 'test/idna_vectors.hpp', out,
-                       [POSITIONAL_ROWS, ('misc-misleading-bidirectional',
-                                          'IdnaTestV2.txt holds Bidi controls on purpose, which '
-                                          'clang-tidy reads through their escapes.')])
+                       'idna_vectors', 'test/idna_vectors.hpp', out, [POSITIONAL_ROWS],
+                       ['IdnaTestV2.txt holds Bidi embeddings, overrides and isolates on purpose, '
+                        'which clang-tidy reads through their escapes: a row that holds one is '
+                        f'exempted from {BIDI_CHECK} on its own line.'])
 
 
 def nfc_vectors(version: str, text: str) -> str:
     """The text of test/generated/nfc_test.ipp: the source, NFC and NFD columns of every line of
     NormalizationTest.txt."""
     out: list[str] = []
-    for number, line in enumerate(text.splitlines(), start=1):
+    for number, line in enumerate(text.split('\n'), start=1):
         body = line.split('#', 1)[0].strip()
         if not body or body.startswith('@'):
             continue
@@ -702,16 +708,20 @@ def nfc_vectors(version: str, text: str) -> str:
         out.append('    nfc_vector{' + ', '.join(u32_literal(column) for column in columns) + '},')
     return vector_file(version, 'NormalizationTest.txt\'s first three columns, a row per line',
                        'nfc_vector', 'nfc_vectors', 'test/nfc_vectors.hpp', out,
-                       [POSITIONAL_ROWS])
+                       [POSITIONAL_ROWS], [])
 
 
 def vector_file(version: str, what: str, kind: str, name: str, declared_in: str,
-                rows: Sequence[str], exemptions: Sequence[tuple[str, str]]) -> str:
+                rows: Sequence[str], exemptions: Sequence[tuple[str, str]],
+                notes: Sequence[str]) -> str:
     """A generated file of test vectors: the array `name` of `rows`, whose type `kind` the test
     header `declared_in` declares before it includes the file, with each clang-tidy check of
-    `exemptions` turned off around it, after the comment line that gives its reason."""
+    `exemptions` turned off around it, after the comment that gives its reason, and the `notes`
+    on the rows' own exemptions."""
     checks = ', '.join(check for check, _ in exemptions)
-    reasons = ''.join(f'// {reason}\n' for _, reason in exemptions)
+    comments = [reason for _, reason in exemptions] + list(notes)
+    reasons = ''.join(textwrap.fill(comment, 100, initial_indent='// ',
+                                    subsequent_indent='// ') + '\n' for comment in comments)
     return (NOTICE.format(version=version)
             + f'//\n// {what}.\n// The array {name} of webcpp::test::{kind}, which {declared_in}\n'
             '// declares before it includes this file.\n\n'

@@ -12,8 +12,10 @@
 // declares before it includes this file.
 
 // The rows are positional, as designated initializers would double the file.
-// IdnaTestV2.txt holds Bidi controls on purpose, which clang-tidy reads through their escapes.
-// NOLINTBEGIN(modernize-use-designated-initializers, misc-misleading-bidirectional)
+// IdnaTestV2.txt holds Bidi embeddings, overrides and isolates on purpose, which clang-tidy reads
+// through their escapes: a row that holds one is exempted from misc-misleading-bidirectional on its
+// own line.
+// NOLINTBEGIN(modernize-use-designated-initializers)
 // clang-format off
 inline constexpr std::array<idna_vector, 6391> idna_vectors{
     idna_vector{106, "fass.de", "fass.de", false, "fass.de", false, "fass.de", false, true, ""},
@@ -1850,8 +1852,11 @@ inline constexpr std::array<idna_vector, 6391> idna_vectors{
     idna_vector{1949, "\360\260\205\247\361\243\251\240-\357\274\216\352\257\255-\346\202\234", "\360\260\205\247\361\243\251\240-.\352\257\255-\346\202\234", true, "xn----7m53aj640l.xn----8f4br83t", true, "xn----7m53aj640l.xn----8f4br83t", true, true, ""},
     idna_vector{1950, "\360\260\205\247\361\243\251\240-.\352\257\255-\346\202\234", "\360\260\205\247\361\243\251\240-.\352\257\255-\346\202\234", true, "xn----7m53aj640l.xn----8f4br83t", true, "xn----7m53aj640l.xn----8f4br83t", true, true, ""},
     idna_vector{1951, "xn----7m53aj640l.xn----8f4br83t", "\360\260\205\247\361\243\251\240-.\352\257\255-\346\202\234", true, "xn----7m53aj640l.xn----8f4br83t", true, "xn----7m53aj640l.xn----8f4br83t", true, true, ""},
+    // NOLINTNEXTLINE(misc-misleading-bidirectional)
     idna_vector{1952, "\341\241\211\360\266\223\247\342\254\236\341\242\234.-\342\200\215\360\236\243\221\342\200\256", "\341\241\211\360\266\223\247\342\254\236\341\242\234.-\342\200\215\360\236\243\221\342\200\256", true, "xn--87e0ol04cdl39e.xn----ugn5e3763s", true, "xn--87e0ol04cdl39e.xn----qinu247r", true, false, ""},
+    // NOLINTNEXTLINE(misc-misleading-bidirectional)
     idna_vector{1953, "xn--87e0ol04cdl39e.xn----qinu247r", "\341\241\211\360\266\223\247\342\254\236\341\242\234.-\360\236\243\221\342\200\256", true, "xn--87e0ol04cdl39e.xn----qinu247r", true, "xn--87e0ol04cdl39e.xn----qinu247r", true, false, ""},
+    // NOLINTNEXTLINE(misc-misleading-bidirectional)
     idna_vector{1954, "xn--87e0ol04cdl39e.xn----ugn5e3763s", "\341\241\211\360\266\223\247\342\254\236\341\242\234.-\342\200\215\360\236\243\221\342\200\256", true, "xn--87e0ol04cdl39e.xn----ugn5e3763s", true, "xn--87e0ol04cdl39e.xn----ugn5e3763s", true, false, ""},
     idna_vector{1955, "\342\222\220\342\200\214\350\241\203\341\202\275.\332\202\341\202\264", "\342\222\220\342\200\214\350\241\203\342\264\235.\332\202\342\264\224", true, "xn--0ugx0px1izu2h.xn--7ib268q", true, "xn--1shy52abz3f.xn--7ib268q", true, true, ""},
     idna_vector{1956, "9.\342\200\214\350\241\203\341\202\275.\332\202\341\202\264", "9.\342\200\214\350\241\203\342\264\235.\332\202\342\264\224", true, "9.xn--0ug862cbm5e.xn--7ib268q", true, "9.xn--llj1920a.xn--7ib268q", true, true, ""},
@@ -6409,4 +6414,4 @@ inline constexpr std::array<idna_vector, 6391> idna_vectors{
     idna_vector{6508, "\346\206\241?\341\202\264.XN--1UG73GL146A", "\346\206\241?\342\264\224.\360\220\213\256\342\200\215\342\211\240", true, "xn--?-fwsr13r.xn--1ug73gl146a", true, "xn--?-fwsr13r.xn--1ug73gl146a", true, false, ""},
 };
 // clang-format on
-// NOLINTEND(modernize-use-designated-initializers, misc-misleading-bidirectional)
+// NOLINTEND(modernize-use-designated-initializers)
