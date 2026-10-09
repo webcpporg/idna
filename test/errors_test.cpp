@@ -9,6 +9,7 @@
 #include <boost/core/lightweight_test.hpp>
 
 #include <array>
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -21,6 +22,11 @@ namespace {
 // it from the heap, and may throw what operator new throws (idna-invariant-2).
 static_assert(noexcept(idna::error_category().message(0, nullptr, 0)));
 static_assert(!noexcept(idna::error_category().message(0)));
+
+// The call a program without exceptions makes, error_code's message into a caller's buffer, throws
+// nothing for an error of idna (idna-invariant-2).
+static_assert(noexcept(idna::make_error_code(idna::error::invalid_utf8)
+                           .message(std::declval<char*>(), std::size_t{})));
 
 /** Every enumerator with its fixed value and its message, as the guide's table spells them. */
 constexpr auto spellings = std::to_array<std::pair<idna::error, std::string_view>>({
