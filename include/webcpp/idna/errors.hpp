@@ -32,8 +32,9 @@ namespace webcpp::idna {
  @ref error_category.
 
  One enumerator per rule family, not per UTS 46 status code: the comment of
- each names the codes of UTS 46 and the sections of the RFCs it reports. The
- values start at 1, so an `error_code` of value 0 is no error.
+ each names the steps of UTS 46, the status codes of IdnaTestV2 and the
+ sections of the RFCs it reports. The values start at 1, so an `error_code` of
+ value 0 is no error.
 
  @note The values are fixed: they are never reused for a different meaning,
  so a stored value keeps its meaning across versions.
@@ -44,7 +45,7 @@ enum class error : int {
     invalid_utf8 = 1,
 
     /** A code point whose UTS 46 status is neither valid nor, in nontransitional processing,
-        deviation (UTS 46 V7). */
+        deviation (UTS 46 V7), or a U+002E FULL STOP inside a label (UTS 46 V5). */
     disallowed = 2,
 
     /** A code point UTS 46 marks NV8 or XV8: DISALLOWED in IDNA2008 (options::idna2008). */
@@ -69,15 +70,15 @@ enum class error : int {
     /** A label that starts with a combining mark (UTS 46 V6, RFC 5891 section 5.4). */
     leading_combining_mark = 9,
 
-    /** A joiner outside the context RFC 5892 A.1 and A.2 allow (UTS 46 C1, C2,
+    /** A joiner outside the context RFC 5892 A.1 and A.2 allow (IdnaTestV2 C1, C2,
         options::check_joiners). */
     contextj = 10,
 
     /** A code point outside the context RFC 5892 A.3 to A.9 allow (options::idna2008). */
     contexto = 11,
 
-    /** A Bidi domain name with a label that breaks RFC 5893 section 2 (UTS 46 B1 to B6,
-        options::check_bidi). */
+    /** A Bidi domain name with a label that breaks RFC 5893 section 2 (IdnaTestV2 B1 to
+        B6, options::check_bidi). */
     bidi = 12,
 
     /** Punycode that does not decode, an A-label that decodes to nothing or to ASCII alone, or
@@ -90,10 +91,12 @@ enum class error : int {
     /** An empty label (UTS 46 A4_2 and X4_2, options::verify_dns_length). */
     empty_label = 15,
 
-    /** A label longer than 63 octets in its ASCII form (UTS 46 A4_2). */
+    /** A label longer than 63 octets in its ASCII form (UTS 46 A4_2,
+        options::verify_dns_length). */
     label_too_long = 16,
 
-    /** A domain name longer than 253 octets in its ASCII form (UTS 46 A4_1). */
+    /** A domain name longer than 253 octets in its ASCII form (UTS 46 A4_1,
+        options::verify_dns_length). */
     domain_too_long = 17,
 
     /** The caller's span cannot hold the result. */
@@ -133,7 +136,7 @@ inline const char* message_of(int value) noexcept {
 }
 
 /**
- A constant category with a fixed identity, so it holds no mutable state.
+ A constant category with a fixed identity, so idna keeps no mutable state of its own.
 
  @note The identity is the ASCII of "idna" followed by four zero bytes.
 */
@@ -154,13 +157,14 @@ public:
     */
     const char* message(int value, char* buffer, std::size_t size) const noexcept override {
         const char* text = message_of(value);
-        if (buffer != nullptr && size != 0) {
-            const std::string_view spelling(text);
-            const std::size_t limit = size - 1;
-            const std::size_t count = spelling.size() < limit ? spelling.size() : limit;
-            std::memcpy(buffer, spelling.data(), count);
-            buffer[count] = '\0';
+        if (buffer == nullptr || size == 0) {
+            return text;
         }
+        const std::string_view spelling(text);
+        const std::size_t limit = size - 1;
+        const std::size_t count = spelling.size() < limit ? spelling.size() : limit;
+        std::memcpy(buffer, spelling.data(), count);
+        buffer[count] = '\0';
         return text;
     }
 };

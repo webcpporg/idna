@@ -24,7 +24,7 @@ target the Jamfile declares:
 
 | `options`
 | The strict profile's defaults, the designated initializers of the
-  aggregate, and the DNS lengths.
+  aggregate, the DNS lengths and the version of Unicode.
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,
