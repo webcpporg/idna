@@ -76,22 +76,25 @@ own, and the page's section "Moving to another version of Unicode"
 
 `include/webcpp/idna/detail/tables.hpp` is generated: never edit it by hand.
 `tools/generate_tables.py` writes it from the Unicode files that
-`tools/unicode.json` pins by URL and SHA-256, run from the superproject's
-root:
+`tools/unicode.json` pins by URL and SHA-256. It is run from the
+superproject's root by `update-generated`, which writes every generated file
+in place, or none when the generator fails (the check of the generated
+files, below):
 
 ```bash
-python3 libs/idna/tools/generate_tables.py
+b2 libs/idna/test//update-generated
 ```
 
-It downloads a missing file into `bin/unicode/<version>/` (`--cache <dir>`
-names another place), stops on a digest that differs from the pin, and
-checks what the library assumes of the data before it writes anything (its
-docstring lists the checks). A property value it does not know, such as a
-script that a new Unicode version adds, stops it by name: the value joins
-its list in the generator once it is known not to matter to IDNA. Two runs
-write the same bytes. The packing of each array is stated in the Doc Comment
-above it, in the generated file, and `detail/properties.hpp` holds the only
-code that reads it.
+Outside a build, `python3 libs/idna/tools/generate_tables.py` writes the
+same files in place itself. The generator downloads a missing file into
+`bin/unicode/<version>/` (`--cache <dir>` names another place), stops on a
+digest that differs from the pin, and checks what the library assumes of the
+data before it writes anything (its docstring lists the checks). A property
+value it does not know, such as a script that a new Unicode version adds,
+stops it by name: the value joins its list in the generator once it is known
+not to matter to IDNA. Two runs write the same bytes. The packing of each
+array is stated in the Doc Comment above it, in the generated file, and
+`detail/properties.hpp` holds the only code that reads it.
 
 - **IDNA2008's property is derived, not shipped.** A code point is PVALID,
   CONTEXTJ or CONTEXTO exactly when its UTS 46 status is valid or deviation
