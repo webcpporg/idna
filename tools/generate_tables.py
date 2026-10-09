@@ -5,9 +5,9 @@
 # accompanying file LICENSE_1_0.txt or copy at
 # https://www.boost.org/LICENSE_1_0.txt)
 
-"""Writes idna's Unicode tables from the pinned Unicode files.
+"""Writes idna's Unicode tables and its conformance vectors from the pinned Unicode files.
 
-Usage: generate_tables.py [--cache DIR] [TABLES]
+Usage: generate_tables.py [--cache DIR] [TABLES IDNA_VECTORS NFC_VECTORS]
 
 The inputs are the files tools/unicode.json pins, each by its URL and its SHA-256. A file missing
 from the cache directory (default: bin/unicode/<version>/ of the superproject) is downloaded into
@@ -15,9 +15,13 @@ it; every file is hashed, and a digest that differs from the pinned one stops th
 the file (or the URL it was downloaded from, which then leaves nothing in the cache) and both
 digests, before anything is written.
 
-The output is written at the path given, or by default at its place in the library:
-include/webcpp/idna/detail/tables.hpp, the tables as constexpr data. Two runs write the same bytes:
-no date, sorted data, "\\n" line endings. Nothing is written unless every check passed.
+The three outputs are written at the paths given, in this order, or by default at their places in
+the library: include/webcpp/idna/detail/tables.hpp, the tables as constexpr data;
+test/generated/idna_test_v2.ipp, IdnaTestV2.txt as rows; test/generated/nfc_test.ipp, the first
+three columns of NormalizationTest.txt as rows. webcpp.generated runs it with paths in its build
+directory, and compares the outputs with the committed files, or copies them over the committed
+files for update-generated. Two runs write the same bytes: no date, sorted data, "\\n" line
+endings. Nothing is written unless every check passed.
 
 Before writing, the generator checks what the library assumes of the data, and stops naming the
 assumption that fails: every status of IdnaMappingTable.txt is one of the five it knows; a code
@@ -29,6 +33,14 @@ algorithmically); and every value a file holds is known, either one the tables k
 as reading as other. A new Unicode version that adds a value (a script, say) stops the generator
 naming it, and the value joins its list once it is known not to matter to IDNA.
 
+It checks the test files the same way: every line of IdnaTestV2.txt has its seven fields, each
+status field is blank or a list of the status codes the file's header describes, and every escape
+is a \\uXXXX that stands for one code point (a pair of escaped surrogates, which could mean one
+code point or two, stops it); every line of NormalizationTest.txt has its five columns of code
+points, none a surrogate. And test/known_failures.json is for the pinned version of Unicode, and
+each of its entries names a line of IdnaTestV2.txt by its number and its source, as the file
+writes it, once, with a reason.
+
 Exit 0 when every output was written, 1 naming a fault, 2 on a usage error.
 """
 
@@ -39,6 +51,7 @@ import csv
 import hashlib
 import io
 import json
+import re
 import sys
 import textwrap
 import urllib.request
@@ -48,9 +61,12 @@ from pathlib import Path
 LIBRARY = Path(__file__).resolve().parent.parent
 SUPERPROJECT = LIBRARY.parent.parent
 PINNED = LIBRARY / 'tools' / 'unicode.json'
+KNOWN_FAILURES = LIBRARY / 'test' / 'known_failures.json'
 
 TABLES = 'include/webcpp/idna/detail/tables.hpp'
-OUTPUTS = (TABLES,)
+IDNA_VECTORS = 'test/generated/idna_test_v2.ipp'
+NFC_VECTORS = 'test/generated/nfc_test.ipp'
+OUTPUTS = (TABLES, IDNA_VECTORS, NFC_VECTORS)
 
 LAST_CODE_POINT = 0x10FFFF
 STATUSES = ('valid', 'mapped', 'deviation', 'ignored', 'disallowed')
@@ -108,6 +124,17 @@ FULL_STOP = 0x002E
 HANGUL_FIRST, HANGUL_LAST = 0xAC00, 0xD7A3
 MAX_DECOMPOSITION = 4
 MAPPING_LENGTH_BITS, MAPPING_OFFSET_BITS = 5, 23
+SURROGATES = range(0xD800, 0xE000)
+
+# The test files' formats, as their headers state them: IdnaTestV2.txt's seven fields, its status
+# codes (Pn, Vn, U1, An, Bn, Cn and Xn, a step and a substep), its one escape, and
+# NormalizationTest.txt's five columns, each line ending with a semicolon.
+IDNA_TEST_FIELDS = 7
+STATUS_CODE = re.compile(r'[PVABCX][0-9]+(?:_[0-9]+)?|U1')
+ESCAPE = re.compile(r'\\u([0-9A-Fa-f]{4})')
+NORMALIZATION_TEST_COLUMNS = 5
+POSITIONAL_ROWS = ('modernize-use-designated-initializers',
+                   'The rows are positional, as designated initializers would double the file.')
 
 NOTICE = """\
 // Copyright (c) 2026 WebCpp.org
@@ -532,12 +559,174 @@ def tables_header(version: str, inputs: dict[str, str], mapping: Mapping) -> str
     return '\n'.join(parts)
 
 
+# Test vectors
+
+
+def utf8_literal(text: str) -> str:
+    """A C++ string literal of the UTF-8 of `text`: printable ASCII as it is, every other byte as
+    a three-digit octal escape, which never runs into the character after it. A lone surrogate is
+    encoded as its three bytes, which no well-formed UTF-8 holds."""
+    out = ['"']
+    for char in text:
+        for byte in char.encode('utf-8', 'surrogatepass'):
+            if byte in (0x22, 0x5C):
+                out.append('\\' + chr(byte))
+            elif 0x20 <= byte < 0x7F:
+                out.append(chr(byte))
+            else:
+                out.append(f'\\{byte:03o}')
+    out.append('"')
+    return ''.join(out)
+
+
+def u32_literal(code_points: Sequence[int]) -> str:
+    """A C++ U"" literal of the code points, each a universal character name: \\u in the Basic
+    Multilingual Plane, \\U beyond it."""
+    names = (f'\\u{cp:04X}' if cp <= 0xFFFF else f'\\U{cp:08X}' for cp in code_points)
+    return 'U"' + ''.join(names) + '"'
+
+
+def unescape(field: str, where: str) -> str:
+    """A field of IdnaTestV2.txt with its \\uXXXX escapes resolved, "" being the empty string."""
+    if field == '""':
+        return ''
+    if '\\' in ESCAPE.sub('', field):
+        raise Fault(f'{where}: an escape other than \\uXXXX in {field!r}')
+    text = ESCAPE.sub(lambda match: chr(int(match.group(1), 16)), field)
+    for first, second in zip(text, text[1:]):
+        if 0xD800 <= ord(first) < 0xDC00 and 0xDC00 <= ord(second) < 0xE000:
+            raise Fault(f'{where}: the escaped surrogates in {field!r} may be one code point or '
+                        'two')
+    return text
+
+
+def has_error(field: str, where: str) -> bool:
+    """Whether a status field that is not blank lists a status code, after checking its form."""
+    if not (field.startswith('[') and field.endswith(']')):
+        raise Fault(f'{where}: the status {field!r} is not a list in brackets')
+    codes = [code.strip() for code in field[1:-1].split(',')] if field != '[]' else []
+    for code in codes:
+        if not STATUS_CODE.fullmatch(code):
+            raise Fault(f'{where}: unknown status code {code!r}')
+    return bool(codes)
+
+
+def known_failures(path: Path, version: str, sources: dict[int, str]) -> dict[int, str]:
+    """The reason of each line test/known_failures.json lists, by its number, after checking that
+    the list is for the pinned version of Unicode and that each entry names a line of
+    IdnaTestV2.txt by its number and its source, once, with a reason."""
+    try:
+        data = json.loads(path.read_text(encoding='utf-8'))
+    except ValueError as error:
+        raise Fault(f'{path}: {error}') from error
+    if (not isinstance(data, dict) or sorted(data) != ['failures', 'unicode']
+            or not isinstance(data['failures'], list)):
+        raise Fault(f'{path}: not an object of "unicode" and a list "failures"')
+    if data['unicode'] != version:
+        raise Fault(f'{path}: lists the failures of Unicode {data["unicode"]}, and the pinned '
+                    f'files are Unicode {version}')
+    found: dict[int, str] = {}
+    for entry in data['failures']:
+        if (not isinstance(entry, dict) or sorted(entry) != ['line', 'reason', 'source']
+                or type(entry['line']) is not int or not isinstance(entry['source'], str)
+                or not isinstance(entry['reason'], str) or not entry['reason']):
+            raise Fault(f'{path}: {entry!r} is not a line, its source and a reason')
+        if sources.get(entry['line']) != entry['source']:
+            raise Fault(f'{path}: line {entry["line"]} of IdnaTestV2.txt is not '
+                        f'{entry["source"]!r}')
+        if entry['line'] in found:
+            raise Fault(f'{path}: line {entry["line"]} is listed twice')
+        found[entry['line']] = entry['reason']
+    return found
+
+
+def idna_vectors(version: str, text: str, mapping: Mapping, failures_path: Path) -> str:
+    """The text of test/generated/idna_test_v2.ipp: one row per line of IdnaTestV2.txt, its blank
+    fields resolved as the file's header says."""
+    parsed: list[tuple[int, list[str]]] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        body = line.split('#', 1)[0]
+        if not body.strip():
+            continue
+        fields = [field.strip() for field in body.split(';')]
+        if len(fields) != IDNA_TEST_FIELDS or not fields[0]:
+            raise Fault(f'IdnaTestV2.txt line {number}: not a source and six fields')
+        parsed.append((number, fields))
+    failures = known_failures(failures_path, version,
+                              {number: fields[0] for number, fields in parsed})
+    out: list[str] = []
+    for number, fields in parsed:
+        where = f'IdnaTestV2.txt line {number}'
+        source = unescape(fields[0], where)
+        to_unicode = unescape(fields[1], where) if fields[1] else source
+        unicode_error = has_error(fields[2], where) if fields[2] else False
+        to_ascii_n = unescape(fields[3], where) if fields[3] else to_unicode
+        ascii_n_error = has_error(fields[4], where) if fields[4] else unicode_error
+        to_ascii_t = unescape(fields[5], where) if fields[5] else to_ascii_n
+        ascii_t_error = has_error(fields[6], where) if fields[6] else ascii_n_error
+        strict = not any(mapping.marked[ord(char)] or ord(char) in CONTEXTO
+                         for char in to_unicode)
+        out.append('    idna_vector{' + ', '.join([
+            str(number), utf8_literal(source), utf8_literal(to_unicode),
+            str(unicode_error).lower(), utf8_literal(to_ascii_n), str(ascii_n_error).lower(),
+            utf8_literal(to_ascii_t), str(ascii_t_error).lower(), str(strict).lower(),
+            utf8_literal(failures.get(number, '')),
+        ]) + '},')
+    return vector_file(version, 'IdnaTestV2.txt, a row per test line', 'idna_vector',
+                       'idna_vectors', 'test/idna_vectors.hpp', out,
+                       [POSITIONAL_ROWS, ('misc-misleading-bidirectional',
+                                          'IdnaTestV2.txt holds Bidi controls on purpose, which '
+                                          'clang-tidy reads through their escapes.')])
+
+
+def nfc_vectors(version: str, text: str) -> str:
+    """The text of test/generated/nfc_test.ipp: the source, NFC and NFD columns of every line of
+    NormalizationTest.txt."""
+    out: list[str] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        body = line.split('#', 1)[0].strip()
+        if not body or body.startswith('@'):
+            continue
+        fields = body.split(';')
+        where = f'NormalizationTest.txt line {number}'
+        if len(fields) != NORMALIZATION_TEST_COLUMNS + 1 or fields[-1].strip():
+            raise Fault(f'{where}: not {NORMALIZATION_TEST_COLUMNS} columns, each followed by a '
+                        'semicolon')
+        try:
+            columns = [[int(cp, 16) for cp in field.split()] for field in fields[:3]]
+        except ValueError as error:
+            raise Fault(f'{where}: {error}') from error
+        for column in columns:
+            if not column or any(cp in SURROGATES or cp > LAST_CODE_POINT for cp in column):
+                raise Fault(f'{where}: a column that is not a sequence of scalar values')
+        out.append('    nfc_vector{' + ', '.join(u32_literal(column) for column in columns) + '},')
+    return vector_file(version, 'NormalizationTest.txt\'s first three columns, a row per line',
+                       'nfc_vector', 'nfc_vectors', 'test/nfc_vectors.hpp', out,
+                       [POSITIONAL_ROWS])
+
+
+def vector_file(version: str, what: str, kind: str, name: str, declared_in: str,
+                rows: Sequence[str], exemptions: Sequence[tuple[str, str]]) -> str:
+    """A generated file of test vectors: the array `name` of `rows`, whose type `kind` the test
+    header `declared_in` declares before it includes the file, with each clang-tidy check of
+    `exemptions` turned off around it, after the comment line that gives its reason."""
+    checks = ', '.join(check for check, _ in exemptions)
+    reasons = ''.join(f'// {reason}\n' for _, reason in exemptions)
+    return (NOTICE.format(version=version)
+            + f'//\n// {what}.\n// The array {name} of webcpp::test::{kind}, which {declared_in}\n'
+            '// declares before it includes this file.\n\n'
+            + reasons + f'// NOLINTBEGIN({checks})\n// clang-format off\n'
+            f'inline constexpr std::array<{kind}, {len(rows)}> {name}{{\n'
+            + '\n'.join(rows) + f'\n}};\n// clang-format on\n// NOLINTEND({checks})\n')
+
+
 # Main
 
 
 def parse_arguments(argv: list[str]) -> argparse.Namespace:
     """The command line: the cache directory, and where the outputs go."""
-    parser = argparse.ArgumentParser(description='Writes idna\'s Unicode tables.')
+    parser = argparse.ArgumentParser(
+        description='Writes idna\'s Unicode tables and its conformance vectors.')
     parser.add_argument('--cache', type=Path, default=None,
                         help='where the pinned files are kept (default: bin/unicode/<version>)')
     parser.add_argument('outputs', type=Path, nargs='*',
@@ -555,7 +744,11 @@ def generate(cache: Path | None, outputs: Sequence[Path]) -> None:
     cache = cache or SUPERPROJECT / 'bin' / 'unicode' / version
     inputs = {path: fetch(entry, cache) for path, entry in sorted(pinned.items())}
     mapping = Mapping(inputs['idna/IdnaMappingTable.txt'])
-    texts = [tables_header(version, inputs, mapping)]
+    texts = [
+        tables_header(version, inputs, mapping),
+        idna_vectors(version, inputs['idna/IdnaTestV2.txt'], mapping, KNOWN_FAILURES),
+        nfc_vectors(version, inputs['ucd/NormalizationTest.txt']),
+    ]
     paths = list(outputs) or [LIBRARY / relative for relative in OUTPUTS]
     for path, text in zip(paths, texts):
         write(path, text.encode('utf-8'))

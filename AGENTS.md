@@ -106,3 +106,16 @@ code that reads it.
   the Unicode License v3: each names the page's appendix "Unicode data" in
   one comment line, the appendix holds the notice whole, and idna's code is
   BSL-1.0 alone.
+- **The vectors are generated too.** `test/generated/idna_test_v2.ipp` and
+  `test/generated/nfc_test.ipp` hold IdnaTestV2.txt and the first three
+  columns of NormalizationTest.txt as rows, so no test reads a file on any
+  target. `test/known_failures.json` lists the IdnaTestV2 lines expected to
+  fail, by number and source (as the file writes it, escapes included), each
+  with its reason; the generator reads it and writes each reason into its
+  line's row, so a change to the list is followed by a run of the generator.
+  A conformance test holds each verdict against the row through
+  `test/known_failures.hpp`'s `as_listed`, which fails on a listed line that
+  passes as on an unlisted line that fails. A listed line must fail under
+  UTS 46 alone, and the strict pass leaves it out. The list is empty, and may
+  hold only a failure that comes from a difference between two versions of
+  Unicode.

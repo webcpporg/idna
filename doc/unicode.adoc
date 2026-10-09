@@ -55,13 +55,15 @@ section 3.12, and take no table.
 [#idna-unicode-generator]
 === The generator
 
-`tools/generate_tables.py`, in idna's repository, writes the tables. Its
-inputs are pinned in `tools/unicode.json`, each by its URL under
-`https://www.unicode.org/Public/{unicode-version}/` and its SHA-256, with
-IANA's IDNA2008 tables, `idna-tables-12.0.0`, read only by its checks. A
-file its cache lacks is downloaded, every file is hashed, and a digest that
-differs stops it, naming the file and both digests, before it writes
-anything.
+`tools/generate_tables.py`, in idna's repository, writes the tables, and
+the vectors of the conformance tests, `IdnaTestV2.txt` and
+`NormalizationTest.txt` as {cpp} data under `test/generated/`
+(<<idna-testing>>). Its inputs are pinned in `tools/unicode.json`, each by
+its URL under `https://www.unicode.org/Public/{unicode-version}/` and its
+SHA-256, with IANA's IDNA2008 tables, `idna-tables-12.0.0`, read only by
+its checks. A file its cache lacks is downloaded, every file is hashed, and
+a digest that differs stops it, naming the file and both digests, before it
+writes anything.
 
 Before it writes, it checks what idna assumes of the data, and stops naming
 the assumption that fails: every status of the mapping table is one of the
@@ -72,8 +74,14 @@ CONTEXTJ and CONTEXTO code points are those of RFC 5892 appendix A; no full
 canonical decomposition is longer than 4 code points; no Hangul syllable has
 a decomposition in `UnicodeData.txt`, since idna computes those; and every
 property value a file holds is one it knows, either one the tables keep or
-one it reads as other. Two runs write the same bytes. Its cache is
-`bin/unicode/{unicode-version}/` of the superproject, which it fills from
+one it reads as other. It reads the test files as strictly: every line of
+`IdnaTestV2.txt` has its seven fields, its status codes take the forms the
+file's header names, and its one escape is `\uXXXX`; every line of
+`NormalizationTest.txt` has its five columns of code points; and each entry
+of `test/known_failures.json` names a line of `IdnaTestV2.txt` by its number
+and its source, once, with a reason, for the pinned version of Unicode. Two
+runs write the same bytes. Its cache is `bin/unicode/{unicode-version}/` of
+the superproject, which it fills from
 unicode.org and iana.org when a file is missing. The data are Unicode's,
 under the Unicode License v3, whose notice is in
 <<idna-unicode-data,the appendix "Unicode data">>.
@@ -99,6 +107,8 @@ version, in this order:
 
 . `tools/unicode.json`: its `version`, and the `url` and the `sha256` of
   each of Unicode's files. IANA's `idna-tables-12.0.0` stays as it is.
+  `test/known_failures.json`: its `unicode`, and no entry, since each names
+  a line of the old `IdnaTestV2.txt`.
 . `tools/generate_tables.py`, run from the superproject's root as
   `python3 libs/idna/tools/generate_tables.py`, which downloads the new
   files. A property value the new version adds, most often a script, stops
@@ -113,8 +123,9 @@ version, in this order:
   `include/webcpp/idna/detail/tables.hpp` and the vectors again.
 . `include/webcpp/idna/options.hpp`: `unicode_version`, which
   `detail/properties.hpp` refuses to compile while it differs from the
-  tables'; and the version that `test/options_test.cpp` and
-  `test/properties_test.cpp` pin.
+  tables'; the version that `test/options_test.cpp` and
+  `test/properties_test.cpp` pin; and the counts and line numbers of the
+  test files that `test/vectors_test.cpp` pins.
 . `doc/idna.adoc`: the attributes `:unicode-version:` and
   `:uts46-revision:`, which every mention of the version and of UTS 46's
   revision on this page reads.

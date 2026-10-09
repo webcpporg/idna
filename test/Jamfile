@@ -29,4 +29,18 @@ webcpp.run options : options_test.cpp ;
 webcpp.run utf8 : utf8_test.cpp ;
 webcpp.run punycode : punycode_test.cpp ;
 webcpp.run properties : properties_test.cpp ;
+
+# The tests that compile the generated vectors, a large file of data each,
+# which MSVC compiles only with /bigobj.
+webcpp.run vectors : vectors_test.cpp : <toolset>msvc:<cxxflags>/bigobj ;
+
+# A conformance test holds each verdict against test/known_failures.json
+# through as_listed, which must fail a program on a listed line that passes and
+# on an unlisted line that fails.
+webcpp.run known_failures : known_failures_test.cpp ;
+webcpp.run-fail known_failures_unexpected_pass : known_failures_test.cpp
+  : <define>WEBCPP_TEST_IDNA_UNEXPECTED_PASS ;
+webcpp.run-fail known_failures_unexpected_failure : known_failures_test.cpp
+  : <define>WEBCPP_TEST_IDNA_UNEXPECTED_FAILURE ;
+
 webcpp.run allocation : allocation_test.cpp ;
