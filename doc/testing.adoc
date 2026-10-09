@@ -93,6 +93,18 @@ target the Jamfile declares:
   each output the file records without an error is valid, its A-labels in
   uppercase too, and a source already in its processed form, or in its ASCII
   form, has the verdict the file gives it.
+
+| `uts46`
+| Every line of IdnaTestV2.txt, toUnicode, toAsciiN and toAsciiT, in the
+  span and the pmr forms, under UTS 46 alone as the file assumes, then the
+  strict profile over the lines whose toUnicode field holds no NV8, XV8 or
+  CONTEXTO code point; and the orders of the errors, the same in both forms
+  under the DNS lengths. Then the pmr forms' bound on a label's Punycode,
+  256 code points: a label of 16,384 distinct ideographs, and an A-label of
+  131,072, refused in less than 10 times the time of a label as long of one
+  ideograph, which the unbounded encoder exceeds by far; and names of labels
+  at the bound converted in less than 10 times the time of their linear
+  twins.
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,

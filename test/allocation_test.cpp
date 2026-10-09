@@ -8,8 +8,7 @@
 // nothing in the span forms and the validators, whatever the input, and in the pmr forms only what
 // their memory resource allocates.
 
-#include <webcpp/idna/punycode.hpp>
-#include <webcpp/idna/validity.hpp>
+#include <webcpp/idna.hpp>
 
 #include <boost/config.hpp>
 #include <boost/core/lightweight_test.hpp>
@@ -201,6 +200,8 @@ std::size_t exercise_span_forms(const std::array<std::string, 14>& inputs,
              idna::options{.verify_dns_length = false},
          }) {
         for (const std::string& input : inputs) {
+            succeeded += idna::to_ascii(out, input, opts).has_value() ? 1 : 0;
+            succeeded += idna::to_unicode(out, input, opts).error ? 0 : 1;
             succeeded += idna::is_valid_domain(input, opts) ? 1 : 0;
             succeeded += idna::is_valid_label(input, opts) ? 1 : 0;
             succeeded += idna::punycode::decode(code_points, input).has_value() ? 1 : 0;
@@ -230,6 +231,9 @@ void pmr_forms_allocate_through_their_resource() {
     counting_resource resource;
     const std::size_t before = global_allocations;
     for (const std::string& input : inputs) {
+        static_cast<void>(
+            idna::to_ascii(input, idna::options{.verify_dns_length = false}, resource));
+        static_cast<void>(idna::to_unicode(input, idna::options(), resource));
         static_cast<void>(idna::punycode::decode(input, resource));
     }
     for (const std::u32string& input : encoded) {

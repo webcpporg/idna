@@ -108,6 +108,18 @@ struct discard_sink {
     void put(std::string_view /*piece*/) noexcept {}
 };
 
+/**
+ The code points a label's Punycode may hold, the encoder's input or the decoder's output, the
+ inline capacity: past it, a label is punycode_overflow.
+
+ Tip: RFC 3492's encoder passes over the label once per distinct code point, and its decoder inserts
+ each code point among those before it, so their work grows with the square of the label. A growing
+ label, in a pmr form, has no other bound; at this one the worst label costs at most about 3.5 times
+ one as long that Punycode handles in linear time, where 1,024 code points cost 14 times and 4,096
+ cost 43 (measured at -O2). The span forms never reach it.
+*/
+inline constexpr std::size_t max_punycode_code_points = max_label_code_points;
+
 /** Whether `text` holds only code points below U+0080. */
 constexpr bool all_ascii(std::u32string_view text) noexcept {
     return std::ranges::all_of(text, [](char32_t cp) { return cp < 0x80; });
@@ -158,7 +170,12 @@ class processor {
 public:
     /** A driver of `opts` in `m`, handing `f` to `sink`, with `label` as its working storage. */
     processor(const options& opts, mode m, form f, Label& label, Sink& sink) noexcept
-        : opts_(opts), mode_(m), form_(f), label_(&label), sink_(&sink) {}
+        : opts_(opts),
+          mode_(m),
+          form_(f),
+          bounded_(opts.verify_dns_length && f == form::ascii),
+          label_(&label),
+          sink_(&sink) {}
 
     /** Processes `domain`, and returns the first error, empty when there was none. */
     boost::system::error_code run(std::string_view domain) noexcept(nothrow_process<Label, Sink>) {
@@ -205,13 +222,24 @@ private:
         return false;
     }
 
+    /**
+     Whether the label at hand is within what the driver holds: the storage's capacity, and the
+     inline capacity in the ASCII form under options::verify_dns_length, whatever the storage.
+
+     Tip: no label past the inline capacity passes the DNS lengths, so a growing label is refused
+     where an inline one runs out, and both forms report the same first error.
+    */
+    [[nodiscard]] bool held() const noexcept {
+        return !bounded_ || label_->view().size() <= max_label_code_points;
+    }
+
     /** Takes one code point of the input, mapped first in mode::map. */
     bool append(char32_t cp) {
         if (mode_ == mode::as_given) {
             if (cp == U'.') {
                 return end_label(false);
             }
-            return label_->push_back(cp) || exhausted();
+            return (label_->push_back(cp) && held()) || exhausted();
         }
         const uts46_entry entry = uts46_of(cp);
         switch (entry.status) {
@@ -237,7 +265,7 @@ private:
         if (cp == U'.') {
             return end_label(false);
         }
-        return nfc::append_decomposed(*label_, cp) || exhausted();
+        return (nfc::append_decomposed(*label_, cp) && held()) || exhausted();
     }
 
     /** Converts and validates the label held, hands it to the sink, and starts the next. */
@@ -304,10 +332,10 @@ private:
         const std::string_view original = label_->keep_ascii();
         std::string_view encoded = original;
         encoded.remove_prefix(4);
-        const result<std::size_t> decoded =
-            punycode::decode(label_->reset(encoded.size()), encoded);
+        const std::size_t room = std::min(encoded.size(), max_punycode_code_points);
+        const result<std::size_t> decoded = punycode::decode(label_->reset(room), encoded);
         if (decoded.has_error()) {
-            return undecodable(original, decoded.error());
+            return undecodable(original, beyond_bound(decoded.error()));
         }
         label_->shrink(decoded.unsafe_value());
         const std::u32string_view unicode = label_->view();
@@ -331,6 +359,16 @@ private:
             return check_length(original.size());
         }
         return write(unicode);
+    }
+
+    /** The error of Punycode that does not decode: output_too_small, from the room
+        @ref max_punycode_code_points leaves the decoder, is punycode_overflow. */
+    static boost::system::error_code beyond_bound(
+        const boost::system::error_code& failure) noexcept {
+        if (failure == error::output_too_small) {
+            return error::punycode_overflow;
+        }
+        return failure;
     }
 
     /** An "xn--" label whose Punycode does not decode: kept as it is, with its error unless
@@ -366,7 +404,9 @@ private:
     boost::system::error_code validate(std::u32string_view text, bool transitional,
                                        bool check_nfc) {
         if (check_nfc) {
-            const nfc::verdict normalized = nfc::is_nfc(text, fresh_like(*label_));
+            // Bounded, the check's copy is held to the inline capacity too, as held() says.
+            const nfc::verdict normalized = bounded_ ? nfc::is_nfc(text, inline_label())
+                                                     : nfc::is_nfc(text, fresh_like(*label_));
             if (normalized == nfc::verdict::exhausted) {
                 exhausted();
                 return beyond_storage();
@@ -457,6 +497,9 @@ private:
             }
             return check_length(text.size());
         }
+        if (text.size() > max_punycode_code_points) {
+            return record(error::punycode_overflow);
+        }
         put("xn--");
         const result<std::size_t> encoded = detail::punycode::encode(text, [this](char c) {
             put(std::string_view(&c, 1));
@@ -522,6 +565,9 @@ private:
 
     /** The form handed to the sink. */
     form form_;
+
+    /** Whether a label is held to the inline capacity whatever its storage, as @ref held says. */
+    bool bounded_;
 
     /** The working storage of the label at hand. */
     Label* label_;
