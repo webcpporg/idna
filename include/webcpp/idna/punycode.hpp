@@ -122,14 +122,11 @@ constexpr char32_t smallest_from(std::u32string_view input, std::uint32_t n) noe
 }
 
 /** Hands the basic code points of `input` to `put`, then the delimiter when there was any: their
-    number, or the first error. */
+    number, or output_too_small. */
 template <class Put>
 constexpr result<std::uint32_t> put_basic(std::u32string_view input, Put& put) {
     std::uint32_t basic = 0;
     for (const char32_t cp : input) {
-        if (!is_scalar(cp)) {
-            return error::invalid_punycode;
-        }
         if (cp >= initial_n) {
             continue;
         }
@@ -147,11 +144,17 @@ constexpr result<std::uint32_t> put_basic(std::u32string_view input, Put& put) {
 /**
  RFC 3492 section 6.3 over `input`, handing each output character to `put`, which returns false
  when it cannot take it: the number of characters handed, or the first error.
+
+ Tip: every code point is checked before the first character is handed, so a code point that is
+ no scalar value is invalid_punycode whatever `put` can take.
 */
 template <class Put>
 constexpr result<std::size_t> encode(std::u32string_view input, Put put) {
     if (input.size() >= max_value) {
         return error::punycode_overflow;
+    }
+    if (!std::ranges::all_of(input, is_scalar)) {
+        return error::invalid_punycode;
     }
     std::size_t written = 0;
     auto counted = [&](char c) {
@@ -227,17 +230,25 @@ inline boost::system::error_code read_integer(std::string_view input, std::size_
 /**
  RFC 3492 section 6.2 over `input` into `output`: the number of code points written, or the first
  error.
+
+ Tip: the basic code points are checked before any is written, so a byte above 0x7F before the
+ delimiter is invalid_punycode whatever the size of `output`. The input's size is bounded as the
+ encoder's is, so that the number of code points written plus one never wraps to zero.
 */
 inline result<std::size_t> decode(std::span<char32_t> output, std::string_view input) noexcept {
+    if (input.size() >= max_value) {
+        return error::punycode_overflow;
+    }
     const std::size_t delimiter = input.rfind('-');
     const std::size_t basic = delimiter == std::string_view::npos ? 0 : delimiter;
+    const auto is_basic = [](char c) { return static_cast<unsigned char>(c) < initial_n; };
+    if (!std::all_of(input.begin(), input.begin() + static_cast<std::ptrdiff_t>(basic), is_basic)) {
+        return error::invalid_punycode;
+    }
     if (basic > output.size()) {
         return error::output_too_small;
     }
     for (std::size_t j = 0; j < basic; ++j) {
-        if (static_cast<unsigned char>(input[j]) >= initial_n) {
-            return error::invalid_punycode;
-        }
         output[j] = static_cast<unsigned char>(input[j]);
     }
     std::size_t written = basic;
@@ -294,7 +305,11 @@ namespace punycode {
  a surrogate or a value above U+10FFFF, @ref error::punycode_overflow when the
  arithmetic overflows 32 bits, @ref error::output_too_small when `output`
  cannot hold the result.
- @note After an error, the contents of `output` are unspecified.
+ @note A surrogate or a value above U+10FFFF is found before anything is
+ written, whatever the size of `output`; an overflow is found as the digits
+ are written, so an `output` too small for the result may give
+ @ref error::output_too_small first. After an error, the contents of `output`
+ are unspecified.
  @see "Punycode", in the guide.
 */
 [[nodiscard]] inline result<std::size_t> encode(std::span<char> output,
@@ -323,7 +338,11 @@ namespace punycode {
  for a character that is not a digit, a non-basic code point before the
  delimiter, a truncated number, or a value that is basic, a surrogate or above
  U+10FFFF; @ref error::punycode_overflow; or @ref error::output_too_small.
- @note After an error, the contents of `output` are unspecified.
+ @note A non-basic code point before the delimiter is found before anything is
+ written, whatever the size of `output`; an error in the digits is found as
+ they are decoded, so an `output` too small for the result may give
+ @ref error::output_too_small first. After an error, the contents of `output`
+ are unspecified.
  @see "Punycode", in the guide.
 */
 [[nodiscard]] inline result<std::size_t> decode(std::span<char32_t> output,

@@ -143,8 +143,9 @@ private:
     std::size_t allocations_ = 0;
 };
 
-/** Inputs that reach every path: long and many labels, every kind of failure, RTL labels, joiners,
-    A-labels, and the NFC check's scratch copy. */
+/** Domain names for every path of the conversions and the validators: long and many labels, every
+    kind of failure, RTL labels, joiners, A-labels, and the NFC check's scratch copy. The Punycode
+    decoder takes each as it is. */
 std::array<std::string, 14> hostile_inputs() {
     std::string many_labels;
     for (int i = 0; i < 500; ++i) {
@@ -168,27 +169,44 @@ std::array<std::string, 14> hostile_inputs() {
     };
 }
 
+/** Code points for every path of the Punycode encoder: a success, a surrogate, an overflow of
+    its arithmetic, and a result longer than the output of exercise_span_forms. */
+std::array<std::u32string, 4> encoder_inputs() {
+    std::u32string overflow(3855, U'a');
+    overflow.push_back(0x10FFFF);
+    return {
+        U"b\u00FCcher",
+        U"ab\xD800",
+        overflow,
+        std::u32string(2000, U'a') + U"\u00FC",
+    };
+}
+
 /**
  Every span form over every input: the number of results that succeeded.
 
  Tip: the count is checked, so no optimizer may drop a call whose result nothing reads.
 */
-std::size_t exercise_span_forms(const std::array<std::string, 14>& inputs) {
+std::size_t exercise_span_forms(const std::array<std::string, 14>& inputs,
+                                const std::array<std::u32string, 4>& encoded) {
     std::array<char, 1024> out{};
     std::array<char32_t, 1024> code_points{};
     std::size_t succeeded = 0;
     for (const std::string& input : inputs) {
         succeeded += idna::punycode::decode(code_points, input).has_value() ? 1 : 0;
     }
-    succeeded += idna::punycode::encode(out, U"b\u00FCcher").has_value() ? 1 : 0;
+    for (const std::u32string& input : encoded) {
+        succeeded += idna::punycode::encode(out, input).has_value() ? 1 : 0;
+    }
     return succeeded;
 }
 
 /** The span forms allocate nothing, whatever the input. */
 void span_forms_allocate_nothing() {
     const std::array<std::string, 14> inputs = hostile_inputs();
+    const std::array<std::u32string, 4> encoded = encoder_inputs();
     const std::size_t before = global_allocations;
-    const std::size_t succeeded = exercise_span_forms(inputs);
+    const std::size_t succeeded = exercise_span_forms(inputs, encoded);
     BOOST_TEST_EQ(global_allocations, before);
     BOOST_TEST(succeeded > 0);
 }
@@ -197,10 +215,14 @@ void span_forms_allocate_nothing() {
     one of the resource's, for the result or a long label's storage. */
 void pmr_forms_allocate_through_their_resource() {
     const std::array<std::string, 14> inputs = hostile_inputs();
+    const std::array<std::u32string, 4> encoded = encoder_inputs();
     counting_resource resource;
     const std::size_t before = global_allocations;
     for (const std::string& input : inputs) {
         static_cast<void>(idna::punycode::decode(input, resource));
+    }
+    for (const std::u32string& input : encoded) {
+        static_cast<void>(idna::punycode::encode(input, resource));
     }
     static_cast<void>(
         idna::punycode::encode(U"b\u00FCcher-and-more-than-a-small-string", resource));

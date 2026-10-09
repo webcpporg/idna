@@ -77,6 +77,15 @@ void ill_formed_sequences() {
     refuses("\342\202");
     refuses("\360\237\230");
     refuses("\303\050");  // a lead followed by no continuation
+    // A bad continuation byte after a good one: a decoder that checks the second byte alone
+    // would take it, the label separator "." among them, as part of the code point.
+    refuses("\342\202(");
+    refuses("\342\202.");
+    refuses("\342\202\300");
+    refuses("\360\237(\200");
+    refuses("\360\237\230(");
+    refuses("\360\237\230.");
+    refuses("\364\217\277\300");
 }
 
 /** At the end of the text there is nothing to decode, and the position and the code point stay

@@ -186,14 +186,20 @@ void edges_both_ways() {
 }
 
 /** Digits are read in either case; the basic code points keep theirs (RFC 3492 section 5). */
-void case_of_digits_and_basic_code_points() {
+/** The code points `input` decodes to, or a string no decode gives when it fails. */
+std::u32string decoded_from(std::string_view input) {
     std::array<char32_t, 16> decoded{};
-    const idna::result<std::size_t> lower = punycode::decode(decoded, "bcher-kva");
-    const idna::result<std::size_t> upper = punycode::decode(decoded, "bcher-KVA");
-    BOOST_TEST(lower.has_value() && upper.has_value());
-    BOOST_TEST(std::u32string_view(decoded.data(), upper.value()) == U"b\u00FCcher");
-    const idna::result<std::size_t> annotated = punycode::decode(decoded, "BCHER-kva");
-    BOOST_TEST(std::u32string_view(decoded.data(), annotated.value()) == U"B\u00FCCHER");
+    const idna::result<std::size_t> read = punycode::decode(decoded, input);
+    if (!BOOST_TEST(read.has_value())) {
+        return U"failed";
+    }
+    return {decoded.data(), read.unsafe_value()};
+}
+
+void case_of_digits_and_basic_code_points() {
+    BOOST_TEST(decoded_from("bcher-kva") == U"b\u00FCcher");
+    BOOST_TEST(decoded_from("bcher-KVA") == U"b\u00FCcher");
+    BOOST_TEST(decoded_from("BCHER-kva") == U"B\u00FCCHER");
 }
 
 void failures() {
@@ -233,8 +239,21 @@ void failures() {
     BOOST_TEST(punycode::encode(encoded, U"\xDFFF").error() == idna::error::invalid_punycode);
 }
 
+/** A code point that is no scalar value, and a byte above 0x7F before the delimiter, are found
+    before anything is written, so the span form returns the pmr form's error whatever its size. */
+void invalid_input_whatever_the_output() {
+    std::array<char, 1> one_char{};
+    BOOST_TEST(punycode::encode(one_char, U"ab\xD800").error() == idna::error::invalid_punycode);
+    BOOST_TEST(punycode::encode(U"ab\xD800").error() == idna::error::invalid_punycode);
+    std::array<char32_t, 1> one_code_point{};
+    BOOST_TEST(punycode::decode(one_code_point, "ab\303\274-kva").error() ==
+               idna::error::invalid_punycode);
+    BOOST_TEST(punycode::decode("ab\303\274-kva").error() == idna::error::invalid_punycode);
+}
+
 /**
- Each overflow of RFC 3492 section 6.4 is found where it happens, each by a guard of its own.
+ Each overflow of RFC 3492 section 6.4 is punycode_overflow, wherever it happens: in the decoder's
+ i or n, in the encoder's delta or in its increments.
 
  Tip: "k0902716a" is 2^32 - 1 as one number under the initial bias, so n, 0x80 plus it, overflows;
  "k0902716b" ends on a digit one larger, so i itself does. The encoder's delta for U+10FF70 after
@@ -245,10 +264,35 @@ void every_overflow_guard() {
     std::array<char32_t, 16> decoded{};
     BOOST_TEST(punycode::decode(decoded, "k0902716a").error() == idna::error::punycode_overflow);
     BOOST_TEST(punycode::decode(decoded, "k0902716b").error() == idna::error::punycode_overflow);
+    // Exactly 2^32 - 1 is no overflow: n reaches it, beyond Unicode.
+    BOOST_TEST(punycode::decode(decoded, "ww902716a").error() == idna::error::invalid_punycode);
     std::array<char, 4096> long_output{};
     std::u32string increments(3855, U'a');
     increments.push_back(0x10FF70);
     BOOST_TEST(punycode::encode(long_output, increments).error() == idna::error::punycode_overflow);
+}
+
+/**
+ Arithmetic that reaches 2^32 - 1 exactly, and no further, succeeds both ways.
+
+ Tip: after 4,095 basic code points, U+10007F's delta is (0x10007F - 0x80) * 4,096, 4,095 below
+ 2^32, and the 4,095 increments that follow reach 2^32 - 1, which the decoder reads back as its
+ i; checked against Python's punycode codec on 2026-10-09.
+*/
+void arithmetic_at_its_limit() {
+    std::u32string code_points(4095, U'a');
+    code_points.push_back(0x10007F);
+    const std::string expected = std::string(4095, 'a') + "-k0902716a";
+    std::array<char, 4200> encoded{};
+    const idna::result<std::size_t> written = punycode::encode(encoded, code_points);
+    if (BOOST_TEST(written.has_value())) {
+        BOOST_TEST(std::string_view(encoded.data(), written.unsafe_value()) == expected);
+    }
+    std::array<char32_t, 4200> decoded{};
+    const idna::result<std::size_t> read = punycode::decode(decoded, expected);
+    if (BOOST_TEST(read.has_value())) {
+        BOOST_TEST(std::u32string_view(decoded.data(), read.unsafe_value()) == code_points);
+    }
 }
 
 /** Every length below the result's is output_too_small, and nothing is written past it. */
@@ -271,6 +315,21 @@ void output_too_small_at_every_length() {
     }
     BOOST_TEST_EQ(punycode::encode(encoded, U"abc").value(), 4U);
     BOOST_TEST_EQ(std::string_view(encoded.data(), 4), "abc-");
+    // The decoder's output of exactly the result's size suffices, whether the last code point is
+    // inserted by the digits or copied from before the delimiter.
+    std::array<char32_t, 6> exact{};
+    const idna::result<std::size_t> six = punycode::decode(exact, "bcher-kva");
+    BOOST_TEST(six.has_value() &&
+               std::u32string_view(exact.data(), six.unsafe_value()) == U"b\u00FCcher");
+    const idna::result<std::size_t> three =
+        punycode::decode(std::span<char32_t>(exact.data(), 3), "abc-");
+    BOOST_TEST(three.has_value() &&
+               std::u32string_view(exact.data(), three.unsafe_value()) == U"abc");
+    BOOST_TEST(punycode::decode(std::span<char32_t>(exact.data(), 2), "abc-").error() ==
+               idna::error::output_too_small);
+    const idna::result<std::size_t> one =
+        punycode::decode(std::span<char32_t>(exact.data(), 1), "a");
+    BOOST_TEST(one.has_value() && one.unsafe_value() == 1U && exact[0] == U'\x80');
     for (std::size_t size = 0; size < 6; ++size) {
         std::array<char32_t, 6> decoded{};
         const idna::result<std::size_t> read =
@@ -297,7 +356,9 @@ int main() {
     edges_both_ways();
     case_of_digits_and_basic_code_points();
     failures();
+    invalid_input_whatever_the_output();
     every_overflow_guard();
+    arithmetic_at_its_limit();
     output_too_small_at_every_length();
     the_pmr_forms();
     return boost::report_errors();
