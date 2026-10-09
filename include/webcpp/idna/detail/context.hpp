@@ -98,14 +98,47 @@ constexpr bool check_joiners(std::u32string_view label) noexcept {
     return true;
 }
 
-/** Whether `label` holds a code point of `kind`. */
-template <class Predicate>
-constexpr bool holds(std::u32string_view label, Predicate kind) noexcept {
-    return std::ranges::any_of(label, kind);
+/** Whether `cp` is of a script A.7 accepts in a label with a KATAKANA MIDDLE DOT. */
+constexpr bool is_kana_or_han(char32_t cp) noexcept {
+    const tables::script s = script_of(cp);
+    return s == tables::script::hiragana || s == tables::script::katakana ||
+           s == tables::script::han;
 }
 
-/** Whether the CONTEXTO code point at `at` satisfies its rule, A.3 to A.9. */
-constexpr bool other_allowed(std::u32string_view label, std::size_t at) noexcept {
+/** What A.7 to A.9 ask of a whole label, gathered once for all their occurrences. */
+struct label_facts {
+    /** Whether the label holds a Hiragana, Katakana or Han code point (A.7). */
+    bool kana_or_han = false;
+
+    /** Whether the label holds an ARABIC-INDIC DIGIT (A.9). */
+    bool arabic_indic_digit = false;
+
+    /** Whether the label holds an EXTENDED ARABIC-INDIC DIGIT (A.8). */
+    bool extended_arabic_indic_digit = false;
+};
+
+/** The facts of `label`, in one pass over it, which reads a code point's script only until one of
+    A.7's scripts is found. */
+constexpr label_facts facts_of(std::u32string_view label) noexcept {
+    label_facts facts;
+    for (const char32_t cp : label) {
+        facts.kana_or_han = facts.kana_or_han || is_kana_or_han(cp);
+        facts.arabic_indic_digit = facts.arabic_indic_digit || is_arabic_indic_digit(cp);
+        facts.extended_arabic_indic_digit =
+            facts.extended_arabic_indic_digit || is_extended_arabic_indic_digit(cp);
+    }
+    return facts;
+}
+
+/**
+ Whether the CONTEXTO code point at `at` satisfies its rule, A.3 to A.9, given the `facts` of the
+ whole label.
+
+ Tip: A.3 to A.6 read a neighbour and A.7 to A.9 read the facts, so each occurrence costs the
+ same whatever the label's length.
+*/
+constexpr bool other_allowed(std::u32string_view label, std::size_t at,
+                             const label_facts& facts) noexcept {
     const char32_t cp = label[at];
     const bool has_before = at > 0;
     const bool has_after = at + 1 < label.size();
@@ -115,24 +148,30 @@ constexpr bool other_allowed(std::u32string_view label, std::size_t at) noexcept
         case 0x0375: return has_after && script_of(label[at + 1]) == tables::script::greek;
         case 0x05F3:
         case 0x05F4: return has_before && script_of(label[at - 1]) == tables::script::hebrew;
-        case 0x30FB:
-            return holds(label, [](char32_t other) {
-                const tables::script s = script_of(other);
-                return s == tables::script::hiragana || s == tables::script::katakana ||
-                       s == tables::script::han;
-            });
+        case 0x30FB: return facts.kana_or_han;
         default: break;
     }
     if (is_arabic_indic_digit(cp)) {
-        return !holds(label, is_extended_arabic_indic_digit);
+        return !facts.extended_arabic_indic_digit;
     }
-    return !holds(label, is_arabic_indic_digit);
+    return !facts.arabic_indic_digit;
 }
 
-/** Whether every CONTEXTO code point of `label` satisfies its rule, A.3 to A.9. */
+/**
+ Whether every CONTEXTO code point of `label` satisfies its rule, A.3 to A.9, in time linear in
+ the label's length.
+
+ Tip: a label without a CONTEXTO code point returns after one pass, and one with them takes a
+ second pass for its facts, never a pass per occurrence: a pmr form may hold a label far beyond a
+ DNS label's length.
+*/
 constexpr bool check_others(std::u32string_view label) noexcept {
+    if (std::ranges::none_of(label, is_contexto)) {
+        return true;
+    }
+    const label_facts facts = facts_of(label);
     for (std::size_t at = 0; at < label.size(); ++at) {
-        if (is_contexto(label[at]) && !other_allowed(label, at)) {
+        if (is_contexto(label[at]) && !other_allowed(label, at, facts)) {
             return false;
         }
     }

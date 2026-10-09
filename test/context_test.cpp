@@ -13,6 +13,9 @@
 #include <boost/core/lightweight_test.hpp>
 
 #include <array>
+#include <chrono>
+#include <cstddef>
+#include <string>
 #include <string_view>
 
 namespace context = webcpp::idna::detail::context;
@@ -57,6 +60,9 @@ void zero_width_non_joiner() {
     BOOST_TEST(!context::check_joiners(U"\u200C\u0628"));
     BOOST_TEST(!context::check_joiners(U"\u0628\u200C"));
     BOOST_TEST(!context::check_joiners(U"a\u200Cb"));
+    // C, join-causing, is neither L nor D (IdnaTestV2 C1).
+    BOOST_TEST(!context::check_joiners(U"\u0640\u200C\u0628"));
+    BOOST_TEST(!context::check_joiners(U"\u0628\u200C\u0640"));
     // The first occurrence is allowed, the second is not.
     BOOST_TEST(!context::check_joiners(U"\u0915\u094D\u200C\u0937x\u200Cy"));
 }
@@ -101,13 +107,78 @@ void katakana_middle_dot_and_digits() {
     BOOST_TEST(!context::check_others(U"\u06F9\u0669"));
 }
 
-/** A.8 and A.9 each on its own: a label with both digits breaks both, so the label alone cannot
-    tell which rule refused it. */
-void each_digit_rule() {
-    BOOST_TEST(context::other_allowed(U"\u0660\u0661", 0));
-    BOOST_TEST(context::other_allowed(U"\u06F0\u06F1", 0));
-    BOOST_TEST(!context::other_allowed(U"\u0660\u06F0", 0));  // A.8
-    BOOST_TEST(!context::other_allowed(U"\u06F0\u0660", 0));  // A.9
+/** What A.7 to A.9 read of a whole label, gathered in one pass. */
+void the_facts_of_a_label() {
+    const context::label_facts none = context::facts_of(U"abc\u0628");
+    BOOST_TEST(!none.kana_or_han);
+    BOOST_TEST(!none.arabic_indic_digit);
+    BOOST_TEST(!none.extended_arabic_indic_digit);
+    BOOST_TEST(context::facts_of(U"a\u3041").kana_or_han);
+    BOOST_TEST(context::facts_of(U"\u30A2").kana_or_han);
+    BOOST_TEST(context::facts_of(U"\u4E00").kana_or_han);
+    BOOST_TEST(!context::facts_of(U"\u30FB\u03B1\u05D0").kana_or_han);
+    const context::label_facts digits = context::facts_of(U"\u0669a\u06F9");
+    BOOST_TEST(digits.arabic_indic_digit);
+    BOOST_TEST(digits.extended_arabic_indic_digit);
+    BOOST_TEST(!context::facts_of(U"\u0669").extended_arabic_indic_digit);
+    BOOST_TEST(!context::facts_of(U"\u06F9").arabic_indic_digit);
+    // A fact holds once found, whatever follows it.
+    BOOST_TEST(context::facts_of(U"\u3041a").kana_or_han);
+    BOOST_TEST(context::facts_of(U"\u0669a").arabic_indic_digit);
+    BOOST_TEST(context::facts_of(U"\u06F9a").extended_arabic_indic_digit);
+}
+
+/** A.7 to A.9 each on its own, from the facts: a label with both digits breaks A.8 and A.9
+    together, so the label alone cannot tell which rule refused it. */
+void each_whole_label_rule() {
+    constexpr context::label_facts nothing{};
+    constexpr context::label_facts kana{.kana_or_han = true};
+    constexpr context::label_facts arabic{.arabic_indic_digit = true};
+    constexpr context::label_facts extended{.extended_arabic_indic_digit = true};
+    constexpr context::label_facts both{
+        .arabic_indic_digit = true,
+        .extended_arabic_indic_digit = true,
+    };
+    BOOST_TEST(context::other_allowed(U"\u30FB", 0, kana));      // A.7
+    BOOST_TEST(!context::other_allowed(U"\u30FB", 0, nothing));  // A.7
+    BOOST_TEST(context::other_allowed(U"\u0660", 0, arabic));    // A.8
+    BOOST_TEST(!context::other_allowed(U"\u0660", 0, both));     // A.8
+    BOOST_TEST(context::other_allowed(U"\u06F0", 0, extended));  // A.9
+    BOOST_TEST(!context::other_allowed(U"\u06F0", 0, both));     // A.9
+}
+
+/** The code points of the longest labels below: a pass per occurrence of A.7 to A.9 over the whole
+    label takes seconds there, one pass over the label milliseconds. */
+constexpr std::size_t long_label = 32768;
+
+/** `n` copies of `cp`, then `last`. */
+std::u32string repeated(std::size_t n, char32_t cp, char32_t last) {
+    std::u32string label(n, cp);
+    label.push_back(last);
+    return label;
+}
+
+/** A.7 to A.9 over labels far beyond a DNS label, as a pmr form may hold them. */
+void long_labels() {
+    BOOST_TEST(context::check_others(repeated(4096, 0x30FB, 0x3041)));
+    BOOST_TEST(!context::check_others(repeated(4096, 0x30FB, U'a')));
+    BOOST_TEST(context::check_others(repeated(4096, 0x0660, 0x0661)));
+    BOOST_TEST(!context::check_others(repeated(4096, 0x0660, 0x06F0)));
+    BOOST_TEST(!context::check_others(repeated(4096, 0x06F0, 0x0660)));
+}
+
+/** Whether `check_others` of `label` gives `expected` within a second. */
+void within_a_second(const std::u32string& label, bool expected) {
+    const auto start = std::chrono::steady_clock::now();
+    BOOST_TEST_EQ(context::check_others(label), expected);
+    BOOST_TEST(std::chrono::steady_clock::now() - start < std::chrono::seconds(1));
+}
+
+/** A.7 to A.9 in one pass over the label, whatever the number of their occurrences. */
+void long_labels_in_linear_time() {
+    within_a_second(repeated(long_label, 0x30FB, 0x3041), true);
+    within_a_second(repeated(4 * long_label, 0x0660, 0x0661), true);
+    within_a_second(repeated(4 * long_label, 0x06F0, 0x06F1), true);
 }
 
 void the_sets() {
@@ -129,7 +200,10 @@ int main() {
     zero_width_joiner();
     middle_dot_keraia_geresh();
     katakana_middle_dot_and_digits();
-    each_digit_rule();
+    the_facts_of_a_label();
+    each_whole_label_rule();
+    long_labels();
+    long_labels_in_linear_time();
     the_sets();
     return boost::report_errors();
 }

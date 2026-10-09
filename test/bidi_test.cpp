@@ -83,6 +83,11 @@ void first_code_point() {
     is(U"\u0300\u05D0", true, false);
 }
 
+/** An empty label holds no code point: none of RTL and none of a rule's breach. */
+void empty_label() {
+    is(U"", false, true);
+}
+
 }  // namespace
 
 int main() {
@@ -91,5 +96,6 @@ int main() {
     ltr_labels();
     ltr_classes();
     first_code_point();
+    empty_label();
     return boost::report_errors();
 }

@@ -66,13 +66,17 @@ inline constexpr std::uint32_t ltr_ends = bit(tables::bidi_class::l) | bit(table
 inline constexpr std::uint32_t numbers = bit(tables::bidi_class::en) | bit(tables::bidi_class::an);
 
 /**
- RFC 5893 section 2 over `label`, which is not empty: its caller checks emptiness first.
+ RFC 5893 section 2 over `label`; an empty label is neither RTL nor in breach of a rule, since
+ whether a label may be empty is its caller's question (UTS 46's empty label).
 
  Tip: the rules' direction is that of the first code point, R or AL for RTL, as rule 1 (B1) leaves
  only L, R and AL there; a label that starts with L and holds R, AL or AN is RTL in RFC 5893's
  terms and fails rule 2, and fails rule 5 here, so the verdict is the same.
 */
 constexpr label_bidi check(std::u32string_view label) noexcept {
+    if (label.empty()) {
+        return {};
+    }
     std::uint32_t seen = 0;
     tables::bidi_class last = tables::bidi_class::other;
     for (const char32_t cp : label) {
@@ -82,10 +86,10 @@ constexpr label_bidi check(std::u32string_view label) noexcept {
     }
     label_bidi found{.rtl = (seen & right_to_left) != 0, .satisfied = true};
     const tables::bidi_class first = bidi_class_of(label.front());
-    const bool rtl = first == tables::bidi_class::r || first == tables::bidi_class::al;
-    if (!rtl && first != tables::bidi_class::l) {
+    const bool rtl_rules = first == tables::bidi_class::r || first == tables::bidi_class::al;
+    if (!rtl_rules && first != tables::bidi_class::l) {
         found.satisfied = false;  // rule 1
-    } else if (rtl) {
+    } else if (rtl_rules) {
         found.satisfied = (seen & ~rtl_allowed) == 0 && (bit(last) & rtl_ends) != 0 &&
                           (seen & numbers) != numbers;
     } else {
