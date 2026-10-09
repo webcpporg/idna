@@ -47,3 +47,11 @@ webcpp.run context : context_test.cpp ;
 webcpp.run bidi : bidi_test.cpp ;
 
 webcpp.run allocation : allocation_test.cpp ;
+
+# The own lane tables: the generator runs again from the pinned Unicode
+# files, downloading those its cache lacks, and every output is compared
+# with the committed file. The ordinary lanes never run it.
+webcpp.generated tables : ../tools/generate_tables.py
+  : : ../include/webcpp/idna/detail/tables.hpp generated/idna_test_v2.ipp
+      generated/nfc_test.ipp ;
+webcpp.lane tables : generated-tables ;

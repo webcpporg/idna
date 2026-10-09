@@ -67,7 +67,9 @@ Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,
 and `config.hpp` twice, as the build asks and with
 `WEBCPP_IDNA_NO_EXCEPTIONS` defined by the developer. `example/Jamfile`
 builds every program this page shows, runs it, and compares what it printed
-with the `.expected` beside it.
+with the `.expected` beside it. The own lane `tables`,
+`b2 -a libs/idna/test//tables`, checks the generated files against the
+generator (<<idna-unicode-generator>>).
 
 [#idna-testing-targets]
 === Targets and exceptions

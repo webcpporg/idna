@@ -86,6 +86,18 @@ unicode.org and iana.org when a file is missing. The data are Unicode's,
 under the Unicode License v3, whose notice is in
 <<idna-unicode-data,the appendix "Unicode data">>.
 
+The own lane `tables` runs the generator again, into the build directory, and
+compares each of its outputs with the committed file, byte for byte, naming
+each that differs; `update-generated` writes them in place, and is the one
+writer of the generated files. The ordinary lanes never run the generator,
+which may need the network; the CI runs the lane on its own.
+
+[source,bash]
+----
+b2 -a libs/idna/test//tables
+b2 libs/idna/test//update-generated
+----
+
 [#idna-unicode-compile]
 === What the tables cost
 
@@ -109,17 +121,17 @@ version, in this order:
   each of Unicode's files. IANA's `idna-tables-12.0.0` stays as it is.
   `test/known_failures.json`: its `unicode`, and no entry, since each names
   a line of the old `IdnaTestV2.txt`.
-. `tools/generate_tables.py`, run from the superproject's root as
-  `python3 libs/idna/tools/generate_tables.py`, which downloads the new
-  files. A property value the new version adds, most often a script, stops
-  it by name. The value then joins the generator's list of the values it
-  reads as other, `SCRIPT_OTHERS`, `BIDI_OTHERS`, `JOINING_OTHERS` or
+. `tools/generate_tables.py`, run from the superproject's root by
+  `b2 libs/idna/test//update-generated`, which downloads the new files. A
+  property value the new version adds, most often a script, stops it by
+  name. The value then joins the generator's list of the values it reads as
+  other, `SCRIPT_OTHERS`, `BIDI_OTHERS`, `JOINING_OTHERS` or
   `OTHER_CATEGORIES`, once it is known not to matter to IDNA, or the values
   the tables keep, `SCRIPTS`, `BIDI_CLASSES` or `JOINING_TYPES`, with the
   code that reads them, when it does; the comment above those lists names
   the version they were read from. Any other check that fails is an
   assumption of idna's that no longer holds, and is settled before the move
-  goes on. Once every check passes, the generator writes
+  goes on. Once every check passes, `update-generated` writes
   `include/webcpp/idna/detail/tables.hpp` and the vectors again.
 . `include/webcpp/idna/options.hpp`: `unicode_version`, which
   `detail/properties.hpp` refuses to compile while it differs from the
@@ -132,7 +144,7 @@ version, in this order:
 . The text that names the version: the `description` of
   `meta/libraries.json`, the first paragraph of `README.md`, and the section
   "Unicode and the tables" of `AGENTS.md`.
-. Every lane, and the known failures of `test/known_failures.json` brought
-  up to date, each with its reason, and the generator run again, which
-  writes each reason into its row.
+. Every lane, the own lane `tables` among them, and the known failures of
+  `test/known_failures.json` brought up to date, each with its reason, and
+  `update-generated` run again, which writes each reason into its row.
 . The changelog, in a line that names the new version.

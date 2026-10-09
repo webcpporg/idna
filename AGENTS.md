@@ -119,3 +119,9 @@ code that reads it.
   UTS 46 alone, and the strict pass leaves it out. The list is empty, and may
   hold only a failure that comes from a difference between two versions of
   Unicode.
+- **The check of the generated files** is the own lane `tables`:
+  `b2 -a libs/idna/test//tables` runs the generator into the build directory
+  and compares its three outputs with the committed files, and
+  `b2 libs/idna/test//update-generated` writes them in place: in a build, it
+  is the one writer of the generated files. The ordinary lanes never run it;
+  it needs the network until the cache is filled.
