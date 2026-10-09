@@ -1,0 +1,23 @@
+// Copyright (c) 2026 WebCpp.org
+//
+// Distributed under the Boost Software License, Version 1.0. (See
+// accompanying file LICENSE_1_0.txt or copy at
+// https://www.boost.org/LICENSE_1_0.txt)
+
+[#idna-allocation]
+== Allocation
+
+idna allocates nothing it does not have to, and lets its user choose where
+what it does allocate comes from. Every conversion has two forms:
+
+* *A span form* writes into the caller's buffer, `std::span<char>` or
+  `std::span<char32_t>`, and allocates nothing, whatever its input. The
+  validators, `check_label` and `check_domain`, allocate nothing either.
+* *A pmr form* returns a `std::pmr::string` or `std::pmr::u32string` from
+  the `std::pmr::memory_resource` it is given, by default
+  `std::pmr::get_default_resource()`. It allocates from that resource alone:
+  its result, and a label's working storage beyond the inline capacity.
+
+The test `allocation` replaces the global `operator new` for itself alone
+and counts: no call across the span forms, over every kind of input, and in
+the pmr forms, exactly the calls of their memory resource.

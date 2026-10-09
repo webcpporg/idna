@@ -1,7 +1,11 @@
 {
     "boundaries": [
         {
-            "headers": ["include/webcpp/idna.hpp", "include/webcpp/idna/*.hpp"],
+            "headers": [
+                "include/webcpp/idna.hpp",
+                "include/webcpp/idna/*.hpp",
+                "include/webcpp/idna/detail/*.hpp"
+            ],
             "must-not-include": ["boost/url", "boost/json", "srell", "webcpp/formats"],
             "why": "idna depends on webcpp::config and header-only Boost alone"
         }

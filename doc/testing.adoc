@@ -26,13 +26,32 @@ target the Jamfile declares:
 | The strict profile's defaults, the designated initializers of the
   aggregate, the DNS lengths and the version of Unicode.
 
+| `utf8`
+| Strict UTF-8: the boundaries of every row of RFC 3629's table of
+  well-formed sequences, decoded and encoded back, every kind of ill-formed
+  one, and the end of the text.
+
+| `punycode`
+| RFC 3492 section 7.1's samples, (A) to (S), both ways, and inputs that
+  tell apart what the samples leave alike in the bias; digits in either case
+  and the mixed-case annotation kept; a leading delimiter, a bad digit, a
+  number cut short, a value out of Unicode or a surrogate; each overflow of
+  RFC 3492 section 6.4, in the decoder and the encoder; `output_too_small` at
+  every length below the result's; the pmr forms.
+
+| `allocation`
+| The global `operator new`, replaced for this program alone: no call in a
+  span form, and in a pmr form only those of its memory resource.
+
 | `properties`
 | One value of every generated table, through its lookup.
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,
 and `config.hpp` twice, as the build asks and with
-`WEBCPP_IDNA_NO_EXCEPTIONS` defined by the developer.
+`WEBCPP_IDNA_NO_EXCEPTIONS` defined by the developer. `example/Jamfile`
+builds every program this page shows, runs it, and compares what it printed
+with the `.expected` beside it.
 
 [#idna-testing-targets]
 === Targets and exceptions

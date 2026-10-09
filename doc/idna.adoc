@@ -29,9 +29,13 @@ it lists every name the headers declare.
 
 include::introduction.adoc[]
 
+include::punycode.adoc[]
+
 include::converting.adoc[]
 
 include::errors.adoc[]
+
+include::allocation.adoc[]
 
 include::testing.adoc[]
 

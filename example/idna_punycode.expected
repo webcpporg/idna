@@ -1,0 +1,5 @@
+3B-ww4c5e180e575a65lsy2b
+8 code points, the same: yes
+-9uc -> invalid Punycode
+bcher-k -> invalid Punycode
+999999999999999999999 -> Punycode overflow

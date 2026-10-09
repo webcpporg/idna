@@ -49,6 +49,9 @@ namespace `webcpp::idna`, and Punycode's in `webcpp::idna::punycode`:
 
 | `<webcpp/idna/options.hpp>`
 | `idna::options`, the DNS lengths, and the version of Unicode.
+
+| `<webcpp/idna/punycode.hpp>`
+| `punycode::encode` and `punycode::decode` (<<idna-punycode>>).
 |===
 
 [#idna-requirements]
