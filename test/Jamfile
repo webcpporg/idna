@@ -43,4 +43,7 @@ webcpp.run-fail known_failures_unexpected_pass : known_failures_test.cpp
 webcpp.run-fail known_failures_unexpected_failure : known_failures_test.cpp
   : <define>WEBCPP_TEST_IDNA_UNEXPECTED_FAILURE ;
 
+webcpp.run context : context_test.cpp ;
+webcpp.run bidi : bidi_test.cpp ;
+
 webcpp.run allocation : allocation_test.cpp ;
