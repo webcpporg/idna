@@ -9,9 +9,9 @@
 
 idna's tables, `<webcpp/idna/detail/tables.hpp>`, and the conformance
 vectors of its tests, `test/generated/`, are derived from the Unicode
-Character Database and the files of UTS 46, version {unicode-version}, which Unicode,
-Inc. publishes under the following notice. idna's code is under the Boost
-Software License 1.0 alone.
+Character Database and the files of UTS 46, version {unicode-version},
+which Unicode, Inc. publishes under the following notice. idna's code is
+under the Boost Software License 1.0 alone.
 
 [listing]
 ----

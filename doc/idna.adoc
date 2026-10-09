@@ -12,6 +12,7 @@
 :example-caption!:
 :attribute-missing: warn
 :unicode-version: 17.0.0
+:uts46-revision: 35
 
 idna is a header-only library of internationalized domain names in {cpp}20,
 one of the libraries of https://github.com/webcpporg/webcpp[webcpp]:
