@@ -85,7 +85,9 @@ enum class error : int {
         one not in its canonical form (RFC 3492, UTS 46 P4, RFC 5891 section 5.4). */
     invalid_punycode = 13,
 
-    /** Punycode whose arithmetic overflows 32 bits (RFC 3492 section 6.4, UTS 46 A3). */
+    /** Punycode whose arithmetic overflows 32 bits (RFC 3492 section 6.4, UTS 46 A3), or, in the
+        pmr forms of to_ascii and to_unicode, a label whose Punycode would hold more than 256 code
+        points. */
     punycode_overflow = 14,
 
     /** An empty label (UTS 46 A4_2 and X4_2, options::verify_dns_length). */

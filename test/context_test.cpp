@@ -183,14 +183,18 @@ long long fastest_of_three(const std::u32string& label, bool expected) {
 }
 
 /**
- Whether `check_others` of `label` gives `expected` in less than 100 times the time it takes over a
- label as long without a CONTEXTO code point, the fastest of three runs each: one pass over the
- label keeps that ratio near 13 on any machine, and a pass per occurrence takes it to thousands.
+ Whether `check_others` of `label` gives `expected` in less than 1,000 times the time it takes over
+ a label as long without a CONTEXTO code point, the fastest of three runs each: one pass over the
+ label keeps that ratio near 13 on any machine, and a pass per occurrence takes it past 30,000.
+
+ Tip: the baseline takes microseconds, so a loaded machine has taken the ratio to 41 (-O3, 2 x 50
+ rounds beside a build of 18 jobs); 1,000 leaves room for that 24 times over, and still catches the
+ pass per occurrence 30 times over.
 */
 void within_a_ratio(const std::u32string& label, bool expected) {
     const long long baseline = fastest_of_three(std::u32string(label.size(), U'a'), true);
     const long long measured = fastest_of_three(label, expected);
-    BOOST_TEST_LT(measured, 100 * baseline);
+    BOOST_TEST_LT(measured, 1000 * baseline);
 }
 
 /** A.7 to A.9 in one pass over the label, whatever the number of their occurrences. */

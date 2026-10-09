@@ -114,9 +114,9 @@ struct discard_sink {
 
  Tip: RFC 3492's encoder passes over the label once per distinct code point, and its decoder inserts
  each code point among those before it, so their work grows with the square of the label. A growing
- label, in a pmr form, has no other bound; at this one the worst label costs at most about 3.5 times
- one as long that Punycode handles in linear time, where 1,024 code points cost 14 times and 4,096
- cost 43 (measured at -O2). The span forms never reach it.
+ label, in a pmr form, has no other bound; at this one the worst label costs about 4 times one as
+ long that Punycode handles in linear time, where 1,024 code points cost 14 times and 4,096 cost 43
+ (measured at -O2). The span forms never reach it.
 */
 inline constexpr std::size_t max_punycode_code_points = max_label_code_points;
 
@@ -334,8 +334,11 @@ private:
         encoded.remove_prefix(4);
         const std::size_t room = std::min(encoded.size(), max_punycode_code_points);
         const result<std::size_t> decoded = punycode::decode(label_->reset(room), encoded);
+        if (decoded.has_error() && decoded.error() == error::output_too_small) {
+            return beyond_bound(original);
+        }
         if (decoded.has_error()) {
-            return undecodable(original, beyond_bound(decoded.error()));
+            return undecodable(original, decoded.error());
         }
         label_->shrink(decoded.unsafe_value());
         const std::u32string_view unicode = label_->view();
@@ -361,14 +364,12 @@ private:
         return write(unicode);
     }
 
-    /** The error of Punycode that does not decode: output_too_small, from the room
-        @ref max_punycode_code_points leaves the decoder, is punycode_overflow. */
-    static boost::system::error_code beyond_bound(
-        const boost::system::error_code& failure) noexcept {
-        if (failure == error::output_too_small) {
-            return error::punycode_overflow;
-        }
-        return failure;
+    /** An "xn--" label whose Punycode decodes past @ref max_punycode_code_points, the decoder's
+        room: kept as it is, and punycode_overflow whatever options::ignore_invalid_punycode says,
+        since a limit of the implementation is no invalid Punycode. */
+    bool beyond_bound(std::string_view original) {
+        put(original);
+        return record(error::punycode_overflow);
     }
 
     /** An "xn--" label whose Punycode does not decode: kept as it is, with its error unless

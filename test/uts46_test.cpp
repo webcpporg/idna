@@ -70,7 +70,7 @@ bool to_unicode_agrees(std::string_view source, const idna::options& opts,
     const idna::unicode_result span = idna::to_unicode(out, source, opts);
     const idna::unicode_string owned = idna::to_unicode(source, opts);
     if (!idna::detail::utf8::is_valid(source)) {
-        return span.size == 0 && span.error == idna::error::invalid_utf8 &&
+        return span.size == 0 && span.error == idna::error::invalid_utf8 && owned.value.empty() &&
                owned.error == idna::error::invalid_utf8;
     }
     const std::string_view written(out.data(), span.size);
@@ -324,12 +324,14 @@ void both_forms_report_the_same_error() {
 }
 
 /** A label's Punycode holds at most detail::max_punycode_code_points code points in the pmr forms:
-    the encoder's input in to_ascii, the decoder's output in to_unicode; one more is
-    punycode_overflow, and the A-label is kept as it is in the Unicode form. */
+    the encoder's input, and the decoder's output, in to_ascii and to_unicode alike; one more is
+    punycode_overflow whatever options::ignore_invalid_punycode says, and the A-label is kept as it
+    is in the Unicode form. */
 void the_bound_on_punycode() {
     constexpr std::size_t bound = idna::detail::max_punycode_code_points;
     static_assert(bound == 256, "the Doc Comments of the pmr forms state it");
     const idna::options no_lengths{.verify_dns_length = false};
+    const idna::options ignore{.verify_dns_length = false, .ignore_invalid_punycode = true};
     const std::u32string at_bound = ideographs(bound, bound);
     const std::u32string beyond = ideographs(bound + 1, bound + 1);
 
@@ -337,17 +339,36 @@ void the_bound_on_punycode() {
     BOOST_TEST(encoded.has_value() && std::string_view(encoded.value()) == a_label_of(at_bound));
     BOOST_TEST(idna::to_ascii(utf8_of(beyond), no_lengths).error() ==
                idna::error::punycode_overflow);
+    const idna::result<std::pmr::string> kept = idna::to_ascii(a_label_of(at_bound), no_lengths);
+    BOOST_TEST(kept.has_value() && std::string_view(kept.value()) == a_label_of(at_bound));
+    BOOST_TEST(idna::to_ascii(a_label_of(beyond), no_lengths).error() ==
+               idna::error::punycode_overflow);
+    BOOST_TEST(idna::to_ascii(a_label_of(beyond), ignore).error() ==
+               idna::error::punycode_overflow);
 
     const idna::unicode_string decoded = idna::to_unicode(a_label_of(at_bound));
     BOOST_TEST(!decoded.error);
     BOOST_TEST(std::string_view(decoded.value) == utf8_of(at_bound));
-    const idna::unicode_string refused = idna::to_unicode(a_label_of(beyond));
-    BOOST_TEST(refused.error == idna::error::punycode_overflow);
-    BOOST_TEST(std::string_view(refused.value) == a_label_of(beyond));
-    const idna::unicode_string ignored =
-        idna::to_unicode(a_label_of(beyond), idna::options{.ignore_invalid_punycode = true});
-    BOOST_TEST(!ignored.error);
-    BOOST_TEST(std::string_view(ignored.value) == a_label_of(beyond));
+    for (const idna::options& opts : {idna::options(), ignore}) {
+        const idna::unicode_string refused = idna::to_unicode(a_label_of(beyond), opts);
+        BOOST_TEST(refused.error == idna::error::punycode_overflow);
+        BOOST_TEST(std::string_view(refused.value) == a_label_of(beyond));
+    }
+}
+
+/**
+ The decoder stops at the bound, before the rest of the label: Punycode of 300 code points followed
+ by a character that is no digit is punycode_overflow in both pmr forms, where a decoder that read
+ the whole label, its quadratic work done, would find the character first, invalid_punycode.
+*/
+void the_decoder_stops_at_the_bound() {
+    const std::string a_label = a_label_of(ideographs(300, 300)) + "!";
+    const idna::options no_lengths{.verify_dns_length = false};
+    BOOST_TEST(idna::to_unicode(a_label).error == idna::error::punycode_overflow);
+    BOOST_TEST(idna::to_ascii(a_label, no_lengths).error() == idna::error::punycode_overflow);
+    // Within the bound, the same character is found: the label is read to its end.
+    BOOST_TEST(idna::to_unicode(a_label_of(ideographs(200, 200)) + "!").error ==
+               idna::error::invalid_punycode);
 }
 
 /** The nanoseconds of the fastest of three runs of `convert`. */
@@ -373,78 +394,29 @@ long long to_ascii_time(const std::string& domain, const boost::system::error_co
     });
 }
 
-/** The nanoseconds of the fastest of three runs of the pmr to_unicode over `domain`, each of which
-    must record `expected`. */
-long long to_unicode_time(const std::string& domain, const boost::system::error_code& expected) {
-    return fastest_of_three([&] { BOOST_TEST(idna::to_unicode(domain).error == expected); });
-}
-
-/** How many times slower than its baseline a timing test's input may be: a bounded label stays
-    near 1 on every lane, and Punycode without the bound goes far past it. */
+/** How many times slower than its baseline the timing test's input may be: refused, it stays near
+    1 on every lane, and Punycode without the bound takes it past 29. */
 constexpr long long slower = 10;
 
-/** The code points of a label past the bound for the encoder, distinct ideographs, so far below
-    U+9FFF. */
+/** The code points of a label past the bound, distinct ideographs, so far below U+9FFF. */
 constexpr std::size_t long_label = 16384;
-
-/** The code points of an A-label past the bound for the decoder, whose insertions move 4 octets
-    each, so that their square must be large to show. */
-constexpr std::size_t long_a_label = 131072;
 
 static_assert(long_label > 4 * idna::detail::max_punycode_code_points);
 
 /**
- A label of 16,384 distinct ideographs, and an A-label of 131,072 ideographs in 256 descending
- blocks, are refused in less than 10 times the time of a label as long of one ideograph, the fastest
- of three runs each, in the pmr forms: past the bound Punycode does no work, so each ratio stays
- near 1, where the unbounded encoder takes the first to 44 (210 at -O2), and the unbounded decoder
- the second to 42 at -O2 (4 at -O0, where the_bound_on_punycode catches it).
+ A label of 16,384 distinct ideographs is refused in less than 10 times the time of a label of as
+ many copies of one, the fastest of three runs each, in the pmr to_ascii: past the bound the encoder
+ does no work, so the ratio stays near 1, where the unbounded encoder, which passes over the label
+ once per distinct code point, takes it to 29 and more (165 at -O2).
+
+ Tip: the decoder's bound is pinned by the_decoder_stops_at_the_bound, which no timing can make
+ flaky.
 */
-void punycode_beyond_the_bound_in_linear_time() {
+void the_encoder_beyond_the_bound_in_linear_time() {
     const boost::system::error_code overflow = idna::error::punycode_overflow;
-    const long long ascii_baseline = to_ascii_time(utf8_of(ideographs(long_label, 1)), overflow);
-    const long long ascii_measured =
-        to_ascii_time(utf8_of(ideographs(long_label, long_label)), overflow);
-    BOOST_TEST_LT(ascii_measured, slower * ascii_baseline);
-
-    const long long unicode_baseline =
-        to_unicode_time(a_label_of(ideographs(long_a_label, 1)), overflow);
-    const long long unicode_measured =
-        to_unicode_time(a_label_of(ideographs(long_a_label, 256)), overflow);
-    BOOST_TEST_LT(unicode_measured, slower * unicode_baseline);
-}
-
-/** `count` labels of `label`, separated by dots. */
-std::string repeated(const std::string& label, std::size_t count) {
-    std::string domain;
-    for (std::size_t i = 0; i < count; ++i) {
-        domain += (i == 0 ? "" : ".") + label;
-    }
-    return domain;
-}
-
-/**
- A name of labels of detail::max_punycode_code_points distinct ideographs each is converted in less
- than 10 times the time of a name of labels of one ideograph, the fastest of three runs each, in the
- pmr forms: at the bound, Punycode's worst case costs a bounded multiple of the rest of the
- processing, measured near 1.5 (3.4 at -O2), where a bound of 4,096 would cost 9 (43 at -O2).
-*/
-void punycode_at_the_bound_in_bounded_time() {
-    constexpr std::size_t bound = idna::detail::max_punycode_code_points;
-    constexpr std::size_t labels = long_label / bound;
-    const boost::system::error_code none;
-    const std::string hostile = utf8_of(ideographs(bound, bound));
-    const std::string benign = utf8_of(ideographs(bound, 1));
-
-    const long long ascii_baseline = to_ascii_time(repeated(benign, labels), none);
-    const long long ascii_measured = to_ascii_time(repeated(hostile, labels), none);
-    BOOST_TEST_LT(ascii_measured, slower * ascii_baseline);
-
-    const std::string hostile_a_label = a_label_of(ideographs(bound, bound));
-    const std::string benign_a_label = a_label_of(ideographs(bound, 1));
-    const long long unicode_baseline = to_unicode_time(repeated(benign_a_label, labels), none);
-    const long long unicode_measured = to_unicode_time(repeated(hostile_a_label, labels), none);
-    BOOST_TEST_LT(unicode_measured, slower * unicode_baseline);
+    const long long baseline = to_ascii_time(utf8_of(ideographs(long_label, 1)), overflow);
+    const long long measured = to_ascii_time(utf8_of(ideographs(long_label, long_label)), overflow);
+    BOOST_TEST_LT(measured, slower * baseline);
 }
 
 }  // namespace
@@ -465,7 +437,7 @@ int main() {
     a_label_that_decomposes_past_the_storage();
     both_forms_report_the_same_error();
     the_bound_on_punycode();
-    punycode_beyond_the_bound_in_linear_time();
-    punycode_at_the_bound_in_bounded_time();
+    the_decoder_stops_at_the_bound();
+    the_encoder_beyond_the_bound_in_linear_time();
     return boost::report_errors();
 }

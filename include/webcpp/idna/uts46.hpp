@@ -72,9 +72,10 @@ namespace webcpp::idna {
  Under `opts.verify_dns_length` no label beyond the inline storage can pass,
  so such a label is refused as the span form refuses it, and both forms report
  the same error. Without it, a label of any length is converted, but a label
- of more than 256 code points that is not ASCII is
- @ref error::punycode_overflow, since Punycode's work grows with the square of
- a label, and the bound keeps it a small multiple of the rest of the
+ of more than 256 code points that is not ASCII, or an A-label whose Punycode
+ decodes to more, is @ref error::punycode_overflow, whatever
+ `opts.ignore_invalid_punycode` says, since Punycode's work grows with the
+ square of a label, and the bound keeps it a small multiple of the rest of the
  processing.
 
  @param domain The domain name, in UTF-8.
@@ -152,9 +153,9 @@ struct unicode_string {
 
  A label of any length is converted, but an A-label whose Punycode decodes to
  more than 256 code points is kept as it is, with
- @ref error::punycode_overflow, or with no error under
- `opts.ignore_invalid_punycode`, as Punycode that does not decode is: the
- decoder's work grows with the square of the label.
+ @ref error::punycode_overflow whatever `opts.ignore_invalid_punycode` says,
+ since the decoder's work grows with the square of the label and a limit of
+ the implementation is no invalid Punycode.
 
  @param domain The domain name, in UTF-8.
  @param opts The processing's flags.
