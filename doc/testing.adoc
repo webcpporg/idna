@@ -68,7 +68,8 @@ target the Jamfile declares:
 | `context`, `bidi`
 | Each rule of RFC 5892 appendix A and of RFC 5893 section 2, satisfied and
   broken, the joining scripts a hand-written list misses among them, and
-  A.7 to A.9 over labels of thousands of code points within a bound of time.
+  A.7 to A.9 over labels of thousands of code points in less than 100 times
+  the time of a label as long without a CONTEXTO code point.
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,

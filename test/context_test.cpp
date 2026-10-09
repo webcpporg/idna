@@ -12,6 +12,7 @@
 
 #include <boost/core/lightweight_test.hpp>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -148,8 +149,8 @@ void each_whole_label_rule() {
 }
 
 /** The code points of the longest labels below: a pass per occurrence of A.7 to A.9 over the whole
-    label takes seconds there, one pass over the label milliseconds. */
-constexpr std::size_t long_label = 32768;
+    label takes seconds there, one pass over the label a fraction of a millisecond. */
+constexpr std::size_t long_label = 8192;
 
 /** `n` copies of `cp`, then `last`. */
 std::u32string repeated(std::size_t n, char32_t cp, char32_t last) {
@@ -167,18 +168,36 @@ void long_labels() {
     BOOST_TEST(!context::check_others(repeated(4096, 0x06F0, 0x0660)));
 }
 
-/** Whether `check_others` of `label` gives `expected` within a second. */
-void within_a_second(const std::u32string& label, bool expected) {
-    const auto start = std::chrono::steady_clock::now();
-    BOOST_TEST_EQ(context::check_others(label), expected);
-    BOOST_TEST(std::chrono::steady_clock::now() - start < std::chrono::seconds(1));
+/** The nanoseconds of the fastest of three runs of `check_others` over `label`, each of which must
+    give `expected`. */
+long long fastest_of_three(const std::u32string& label, bool expected) {
+    auto fastest = std::chrono::nanoseconds::max();
+    for (int i = 0; i < 3; ++i) {
+        const auto start = std::chrono::steady_clock::now();
+        const bool allowed = context::check_others(label);
+        const auto elapsed = std::chrono::steady_clock::now() - start;
+        BOOST_TEST_EQ(allowed, expected);
+        fastest = std::min(fastest, std::chrono::duration_cast<std::chrono::nanoseconds>(elapsed));
+    }
+    return fastest.count();
+}
+
+/**
+ Whether `check_others` of `label` gives `expected` in less than 100 times the time it takes over a
+ label as long without a CONTEXTO code point, the fastest of three runs each: one pass over the
+ label keeps that ratio near 13 on any machine, and a pass per occurrence takes it to thousands.
+*/
+void within_a_ratio(const std::u32string& label, bool expected) {
+    const long long baseline = fastest_of_three(std::u32string(label.size(), U'a'), true);
+    const long long measured = fastest_of_three(label, expected);
+    BOOST_TEST_LT(measured, 100 * baseline);
 }
 
 /** A.7 to A.9 in one pass over the label, whatever the number of their occurrences. */
 void long_labels_in_linear_time() {
-    within_a_second(repeated(long_label, 0x30FB, 0x3041), true);
-    within_a_second(repeated(4 * long_label, 0x0660, 0x0661), true);
-    within_a_second(repeated(4 * long_label, 0x06F0, 0x06F1), true);
+    within_a_ratio(repeated(long_label, 0x30FB, 0x3041), true);
+    within_a_ratio(repeated(4 * long_label, 0x0660, 0x0661), true);
+    within_a_ratio(repeated(4 * long_label, 0x06F0, 0x06F1), true);
 }
 
 void the_sets() {
