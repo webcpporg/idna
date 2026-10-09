@@ -7,6 +7,10 @@
 /**
  The Unicode properties idna reads, as lookups over the generated tables: each a
  binary search over sorted runs, with no state and no allocation.
+
+ Every code point a lookup takes is at most U+10FFFF, as the UTF-8 and Punycode
+ decoders guarantee: a packed key keeps 24 bits of a code point in a run list and
+ 21 in a composition pair, so a larger value would read another code point's value.
 */
 #ifndef WEBCPP_IDNA_DETAIL_PROPERTIES_HPP
 #define WEBCPP_IDNA_DETAIL_PROPERTIES_HPP
@@ -14,6 +18,7 @@
 #include <webcpp/idna/config.hpp>
 
 #include <webcpp/idna/detail/tables.hpp>
+#include <webcpp/idna/options.hpp>
 
 #include <algorithm>
 #include <array>
@@ -22,6 +27,9 @@
 #include <string_view>
 
 namespace webcpp::idna::detail {
+
+// The tables and options.hpp name one version of Unicode: a move to another changes both.
+static_assert(tables::unicode_version == idna::unicode_version);
 
 /** A code point's entry in the UTS 46 mapping table. */
 struct uts46_entry {

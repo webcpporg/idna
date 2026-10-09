@@ -18,7 +18,19 @@ namespace tables = webcpp::idna::detail::tables;
 
 namespace {
 
+// The lookups are constant expressions, as the tables are.
+static_assert(detail::uts46_of(U'A').mapping == U"a");
+static_assert(detail::bidi_class_of(0x05D0) == tables::bidi_class::r);
+static_assert(detail::combining_class_of(0x0300) == 230U);
+static_assert(detail::decomposition_of(0x00E9).size() == 2U);
+static_assert(detail::composition_of(U'e', 0x0301) == 0xE9);
+
 void uts46_statuses_and_mappings() {
+    // U+0000 opens every run list.
+    const detail::uts46_entry nul = detail::uts46_of(0x0000);
+    BOOST_TEST(nul.status == tables::status::valid);
+    BOOST_TEST(nul.not_idna2008);
+    BOOST_TEST(nul.mapping.empty());
     BOOST_TEST(detail::uts46_of(U'a').status == tables::status::valid);
     BOOST_TEST(!detail::uts46_of(U'a').not_idna2008);
     const detail::uts46_entry inverted_exclamation = detail::uts46_of(0x00A1);
@@ -41,6 +53,7 @@ void uts46_statuses_and_mappings() {
 }
 
 void bidi_classes() {
+    BOOST_TEST(detail::bidi_class_of(0x0000) == tables::bidi_class::bn);
     BOOST_TEST(detail::bidi_class_of(U'a') == tables::bidi_class::l);
     BOOST_TEST(detail::bidi_class_of(0x05D0) == tables::bidi_class::r);
     BOOST_TEST(detail::bidi_class_of(0x0627) == tables::bidi_class::al);
@@ -80,7 +93,7 @@ void normalization_data() {
     BOOST_TEST(detail::nfc_quick_check_of(0x0340) == tables::quick_check::no);
     BOOST_TEST(detail::nfc_quick_check_of(0x0301) == tables::quick_check::maybe);
     BOOST_TEST(detail::decomposition_of(0x00E9) == U"e\u0301");
-    // U+1FAF decomposes in full to four code points, the longest canonical decomposition.
+    // U+1FAF decomposes in full to four code points, as long as a canonical decomposition gets.
     BOOST_TEST_EQ(detail::decomposition_of(0x1FAF).size(), 4U);
     BOOST_TEST(detail::decomposition_of(U'a').empty());
     BOOST_TEST(detail::decomposition_of(0xAC00).empty());  // Hangul is algorithmic
