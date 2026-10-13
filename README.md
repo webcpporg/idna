@@ -78,7 +78,7 @@ do the same for WebAssembly. A b2 project uses idna through
 ## Documentation
 
 idna's page, with its API reference, is published at
-<https://webcpporg.github.io/webcpp/libs/idna/>; `b2 libs/idna/doc` builds
+<https://webcpporg.github.io/libs/idna/>; `b2 libs/idna/doc` builds
 it into `doc/html/index.html`.
 
 ## Unicode data

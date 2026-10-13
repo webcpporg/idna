@@ -182,4 +182,4 @@ b2 -a libs/idna/test//tables
 ----
 
 The test matrix of every lane is at
-https://webcpporg.github.io/webcpp/report/.
+https://webcpporg.github.io/report/.
