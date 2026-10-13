@@ -128,8 +128,8 @@ kind of entry it may hold is a line that fails because of a difference
 between two versions of Unicode, the file's and the tables', with a reason
 that names both. The lines with a lone surrogate, which no UTF-8 string
 holds, are refused as `invalid_utf8`, as the file allows. JSON Schema's own
-tests of `hostname` and `idn-hostname` run in `webcpp::formats`, against the
-formats it builds on idna.
+tests of `hostname` and `idn-hostname` run in `webcpp::lexical`, against the
+validators it builds on idna.
 
 [#idna-testing-targets]
 === Targets and exceptions

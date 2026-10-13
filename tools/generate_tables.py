@@ -570,17 +570,22 @@ def tables_header(version: str, inputs: dict[str, str], mapping: Mapping) -> str
 
 def utf8_literal(text: str) -> str:
     """A C++ string_view literal of the UTF-8 of `text` (SV_LITERALS): printable ASCII as it is,
-    every other byte as a three-digit octal escape, which never runs into the character after it.
-    A lone surrogate is encoded as its three bytes, which no well-formed UTF-8 holds."""
+    every other byte as a three-digit octal escape, and a decimal digit right after an escape as an
+    escape too, since MSVC's warning C4125 refuses a digit that follows one. A lone surrogate is
+    encoded as its three bytes, which no well-formed UTF-8 holds."""
     out = ['"']
+    escaped = False
     for char in text:
         for byte in char.encode('utf-8', 'surrogatepass'):
             if byte in (0x22, 0x5C):
                 out.append('\\' + chr(byte))
-            elif 0x20 <= byte < 0x7F:
+                escaped = False
+            elif 0x20 <= byte < 0x7F and not (escaped and 0x30 <= byte <= 0x39):
                 out.append(chr(byte))
+                escaped = False
             else:
                 out.append(f'\\{byte:03o}')
+                escaped = True
     out.append('"sv')
     return ''.join(out)
 

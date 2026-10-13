@@ -119,8 +119,11 @@ BOOST_NOINLINE void operator delete(void* memory, std::size_t /*size*/,
 
 namespace {
 
-/** A memory resource that counts what it hands out, and takes it from the global operator new
-    through std::pmr::new_delete_resource. */
+/** A memory resource that counts what it hands out, and takes it from this program's global
+    operator new.
+
+    Tip: not through std::pmr::new_delete_resource, which MSVC's runtime library defines in its
+    DLL, whose calls of operator new never reach this program's replacement. */
 class counting_resource final : public std::pmr::memory_resource {
 public:
     /** The number of allocations made through it. */
@@ -129,11 +132,11 @@ public:
 private:
     void* do_allocate(std::size_t size, std::size_t alignment) override {
         ++allocations_;
-        return std::pmr::new_delete_resource()->allocate(size, alignment);
+        return ::operator new(size, std::align_val_t{alignment});
     }
 
     void do_deallocate(void* memory, std::size_t size, std::size_t alignment) override {
-        std::pmr::new_delete_resource()->deallocate(memory, size, alignment);
+        ::operator delete(memory, size, std::align_val_t{alignment});
     }
 
     [[nodiscard]] bool do_is_equal(const std::pmr::memory_resource& other) const noexcept override {

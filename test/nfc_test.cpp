@@ -187,10 +187,13 @@ void the_growing_edge() {
     const std::size_t capacity = detail::max_label_code_points;
     counting_resource resource;
     detail::growing_label label(resource);
+    // What constructing the label took: nothing, but under MSVC's debug library, which gives each
+    // container a proxy from its allocator.
+    const std::size_t made = resource.allocations();
     BOOST_TEST(append_copies(label, capacity, U'a'));
-    BOOST_TEST_EQ(resource.allocations(), 0U);
+    BOOST_TEST_EQ(resource.allocations(), made);
     BOOST_TEST(label.push_back(U'a'));
-    BOOST_TEST_EQ(resource.allocations(), 1U);  // room for as many again, in one allocation
+    BOOST_TEST_EQ(resource.allocations(), made + 1);  // room for as many again, in one allocation
     BOOST_TEST_EQ(label.view().size(), capacity + 1);
 
     detail::growing_label crosses(resource);

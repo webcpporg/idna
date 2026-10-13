@@ -23,7 +23,7 @@ lengths verified, and `idna2008 = true`: IDNA2008's validity on top of
 UTS 46's. UTS 46 alone accepts what IDNA2008 refuses (the code points it
 marks NV8 and XV8, and every CONTEXTO violation, since it has no CONTEXTO
 rules), and JSON Schema's `idn-hostname`, idna's first consumer through
-`webcpp::formats`, asks for IDNA2008. The default never changes to a looser
+`webcpp::lexical`, asks for IDNA2008. The default never changes to a looser
 one.
 
 ## Cautions
@@ -32,7 +32,7 @@ one.
   never reused; a new error takes the next value. The category's name,
   `webcpp.idna`, and its identity, `0x69646E6100000000`, never change either.
   `test/errors_test.cpp` pins them.
-- **The public interface is a contract.** `webcpp::formats` codes against the
+- **The public interface is a contract.** `webcpp::lexical` codes against the
   signatures of `errors.hpp`, `options.hpp`, `punycode.hpp`, `validity.hpp`
   and `uts46.hpp`; a change to one is announced to it. Everything in
   `detail` may change freely.
