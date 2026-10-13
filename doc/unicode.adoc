@@ -59,7 +59,7 @@ section 3.12, and take no table.
 the vectors of the conformance tests, `IdnaTestV2.txt` and
 `NormalizationTest.txt` as {cpp} data under `test/generated/`
 (<<idna-testing>>). Its inputs are pinned in `tools/unicode.json`, each by
-its URL under `https://www.unicode.org/Public/{unicode-version}/` and its
+its URL under `\https://www.unicode.org/Public/{unicode-version}/` and its
 SHA-256, with IANA's IDNA2008 tables, `idna-tables-12.0.0`, read only by
 its checks. A file its cache lacks is downloaded, every file is hashed, and
 a digest that differs stops it, naming the file and both digests, before it
