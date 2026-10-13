@@ -138,6 +138,10 @@ BIDI_CHECK = 'misc-misleading-bidirectional'
 POSITIONAL_ROWS = ('modernize-use-designated-initializers',
                    'The rows are positional, as designated initializers would double the file.')
 
+SV_LITERALS = ('Each string is an sv literal, whose length the compiler knows: a view made from a '
+               'pointer would count its characters in the constant evaluation of the array, '
+               'which every compiler bounds, and Clang on libstdc++ runs out of steps there.')
+
 NOTICE = """\
 // Copyright (c) 2026 WebCpp.org
 //
@@ -565,9 +569,9 @@ def tables_header(version: str, inputs: dict[str, str], mapping: Mapping) -> str
 
 
 def utf8_literal(text: str) -> str:
-    """A C++ string literal of the UTF-8 of `text`: printable ASCII as it is, every other byte as
-    a three-digit octal escape, which never runs into the character after it. A lone surrogate is
-    encoded as its three bytes, which no well-formed UTF-8 holds."""
+    """A C++ string_view literal of the UTF-8 of `text` (SV_LITERALS): printable ASCII as it is,
+    every other byte as a three-digit octal escape, which never runs into the character after it.
+    A lone surrogate is encoded as its three bytes, which no well-formed UTF-8 holds."""
     out = ['"']
     for char in text:
         for byte in char.encode('utf-8', 'surrogatepass'):
@@ -577,15 +581,15 @@ def utf8_literal(text: str) -> str:
                 out.append(chr(byte))
             else:
                 out.append(f'\\{byte:03o}')
-    out.append('"')
+    out.append('"sv')
     return ''.join(out)
 
 
 def u32_literal(code_points: Sequence[int]) -> str:
-    """A C++ U"" literal of the code points, each a universal character name: \\u in the Basic
-    Multilingual Plane, \\U beyond it."""
+    """A C++ U""sv literal of the code points (SV_LITERALS), each a universal character name: \\u
+    in the Basic Multilingual Plane, \\U beyond it."""
     names = (f'\\u{cp:04X}' if cp <= 0xFFFF else f'\\U{cp:08X}' for cp in code_points)
-    return 'U"' + ''.join(names) + '"'
+    return 'U"' + ''.join(names) + '"sv'
 
 
 def unescape(field: str, where: str) -> str:
@@ -680,7 +684,8 @@ def idna_vectors(version: str, text: str, mapping: Mapping, failures_path: Path)
         ]) + '},')
     return vector_file(version, 'IdnaTestV2.txt, a row per test line', 'idna_vector',
                        'idna_vectors', 'test/idna_vectors.hpp', out, [POSITIONAL_ROWS],
-                       ['IdnaTestV2.txt holds Bidi embeddings, overrides and isolates on purpose, '
+                       [SV_LITERALS,
+                        'IdnaTestV2.txt holds Bidi embeddings, overrides and isolates on purpose, '
                         'which clang-tidy reads through their escapes: a row that holds one is '
                         f'exempted from {BIDI_CHECK} on its own line.'])
 
@@ -708,7 +713,7 @@ def nfc_vectors(version: str, text: str) -> str:
         out.append('    nfc_vector{' + ', '.join(u32_literal(column) for column in columns) + '},')
     return vector_file(version, 'NormalizationTest.txt\'s first three columns, a row per line',
                        'nfc_vector', 'nfc_vectors', 'test/nfc_vectors.hpp', out,
-                       [POSITIONAL_ROWS], [])
+                       [POSITIONAL_ROWS], [SV_LITERALS])
 
 
 def vector_file(version: str, what: str, kind: str, name: str, declared_in: str,

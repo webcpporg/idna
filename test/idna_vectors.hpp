@@ -16,6 +16,9 @@
 
 namespace webcpp::test {
 
+// The generated rows' strings are sv literals, whose length the compiler knows.
+using std::string_view_literals::operator""sv;
+
 /** One line of IdnaTestV2.txt, its blank fields resolved as the file's header says. */
 struct idna_vector {
     /** The line's number in the pinned file. */

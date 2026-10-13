@@ -15,6 +15,9 @@
 
 namespace webcpp::test {
 
+// The generated rows' strings are sv literals, whose length the compiler knows.
+using std::string_view_literals::operator""sv;
+
 /** One line of NormalizationTest.txt: its first three columns. */
 struct nfc_vector {
     /** Column 1, the source. */
