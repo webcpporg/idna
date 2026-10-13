@@ -42,10 +42,12 @@ one.
   `value()`, which throws, and clang-tidy's `bugprone-exception-escape` then
   fails the function.
 - **`config.hpp` comes first.** Every public header includes
-  `<webcpp/idna/config.hpp>` first. It includes `<boost/config.hpp>` until
-  `webcpp::config` exists; then that line becomes
-  `#include <webcpp/config.hpp>`, and `build.jam`'s alias gains
-  `<library>/webcpp/config//config`, in one commit.
+  `<webcpp/idna/config.hpp>` first, which includes `<webcpp/config.hpp>` first
+  and defines `WEBCPP_IDNA_NO_EXCEPTIONS` when webcpp has no exceptions
+  (`WEBCPP_HAS_EXCEPTIONS` is not defined: the compiler has none, or the
+  program defined `WEBCPP_NO_EXCEPTIONS`) or when a program defines it for
+  idna alone; the tests `config`, `config_developer_defined` and
+  `config_all_off` check the three ways.
 - **Literals.** A narrow string spells a byte above 0x7F as a three-digit
   octal escape, `"b\303\274cher"`: a hex escape runs into the letters after
   it, and raw UTF-8 is read in the machine's code page by MSVC. A `U""`

@@ -5,8 +5,9 @@
 # https://www.boost.org/LICENSE_1_0.txt)
 #
 # idna, IDNA2008 and UTS 46 for C++20. A program uses it through
-# /webcpp/idna//idna, which adds its headers and Boost's.
+# /webcpp/idna//idna, which adds its headers, Boost's and webcpp's
+# configuration.
 
 project /webcpp/idna ;
 
-alias idna : : : : <include>include <library>/boost//headers ;
+alias idna : : : : <include>include <library>/boost//headers <library>/webcpp/config//config ;

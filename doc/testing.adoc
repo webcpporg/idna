@@ -110,10 +110,12 @@ and every test runs on every target.
 |===
 
 Beside them, `test/Jamfile` compiles each of the {n-headers} headers alone,
-and `config.hpp` twice, as the build asks and with
-`WEBCPP_IDNA_NO_EXCEPTIONS` defined by the developer. `example/Jamfile`
-builds every program this page shows, runs it, and compares what it printed
-with the `.expected` beside it.
+and `config.hpp` three times: as the build asks (`config`), with
+`WEBCPP_NO_EXCEPTIONS` defined for every webcpp library (`config_all_off`),
+and with `WEBCPP_IDNA_NO_EXCEPTIONS` defined by the developer
+(`config_developer_defined`). `example/Jamfile` builds every program this
+page shows, runs it, and compares what it printed with the `.expected`
+beside it.
 
 [#idna-testing-conformance]
 === Conformance, and known failures
@@ -139,12 +141,14 @@ with any toolset, for wasm32-wasip2 and wasm32-wasip3 with the toolsets
 by Node.
 
 `<webcpp/idna/config.hpp>`, which every public header includes first,
-defines `WEBCPP_IDNA_NO_EXCEPTIONS` when the build has no exceptions, and a
-program may define it itself, as Boost.Asio's `BOOST_ASIO_NO_EXCEPTIONS`.
-idna raises no exception of its own (<<idna-invariant-2>>), so the macro
-changes nothing in it: it exists so that a program can set it for every
-webcpp library alike. The lint compiles every header, test and example a
-second time without exceptions.
+defines `WEBCPP_IDNA_NO_EXCEPTIONS` when webcpp has no exceptions
+(`WEBCPP_HAS_EXCEPTIONS` is not defined: the compiler has none, or the
+program defined `WEBCPP_NO_EXCEPTIONS`), and a program may define it for
+idna alone, as Boost.Asio's `BOOST_ASIO_NO_EXCEPTIONS`. idna raises no
+exception of its own (<<idna-invariant-2>>), so the macro changes nothing in
+it: it exists so that a program can set it for every webcpp library alike.
+The lint compiles every header, test and example a second time without
+exceptions.
 
 From the root of a webcpp checkout, natively:
 
@@ -155,7 +159,7 @@ b2 libs/idna/test libs/idna/example
 
 builds the {n-tests-native} programs of `test/Jamfile`, the tests above, the
 two `run-fail` builds of `known_failures`, each header alone and `config.hpp`
-twice, and runs every test among them; and it builds the {n-examples}
+three times, and runs every test among them; and it builds the {n-examples}
 examples, runs each and compares its output. For wasm32-wasip2,
 {n-tests-wasip2} programs and {n-examples-wasip2} examples, run by wasmtime;
 `toolset=clang-wasip3` does the same for wasm32-wasip3:

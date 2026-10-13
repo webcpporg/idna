@@ -13,9 +13,9 @@ the forms that write into a caller's buffer allocate nothing, and the forms
 that return a string take a `std::pmr::memory_resource`.
 
 `<webcpp/idna.hpp>` includes every public header; the names are in the
-namespace `webcpp::idna`. idna needs Boost's headers and nothing to build or
-link. It runs natively, on wasm32-wasip2 and wasm32-wasip3, and with
-Emscripten.
+namespace `webcpp::idna`. idna needs Boost's headers and webcpp's
+configuration, config, and nothing to build or link. It runs natively, on
+wasm32-wasip2 and wasm32-wasip3, and with Emscripten.
 
 ## A minimal example
 

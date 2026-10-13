@@ -91,4 +91,8 @@ namespace `webcpp::idna`, and Punycode's in `webcpp::idna::punycode`:
   native lane of webcpp's continuous integration, for wasm32-wasip2 and
   wasm32-wasip3 with the Clang of wasi-sdk, and with Emscripten under Node.
 * *Boost's headers*, 1.92 or newer: Config, System, Core and Assert. Nothing
-  to build or link, and nothing else.
+  of Boost is built or linked for idna.
+* *webcpp's configuration,*
+  link:{webcpp-libs}/config/{webcpp-page}#config-exceptions[config], whose
+  `<webcpp/config.hpp>` every header of idna includes first. It is
+  header-only too, and idna needs nothing else.
