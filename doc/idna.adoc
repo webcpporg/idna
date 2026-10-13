@@ -60,3 +60,5 @@ library; this one is where a name is looked up.
 include::{reference}[leveloffset=+1]
 
 include::unicode-data.adoc[]
+
+include::changelog.adoc[]
