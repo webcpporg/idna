@@ -55,6 +55,7 @@ import re
 import sys
 import textwrap
 import urllib.request
+import uuid
 from collections.abc import Iterator, Sequence
 from pathlib import Path
 
@@ -168,11 +169,17 @@ def pinned_files(pinned: Path) -> tuple[str, dict[str, dict[str, str]]]:
 
 
 def write(path: Path, data: bytes) -> None:
-    """Writes the data at the path through a sibling file, so that no reader sees half of it."""
+    """Writes the data at the path through a sibling file of its own, so that no reader sees half
+    of it, and two writers of one path, such as two generators filling one cache at once, never
+    rename each other's file: the last to finish wins, with the same checked bytes."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    partial = path.with_name(path.name + '.partial')
-    partial.write_bytes(data)
-    partial.replace(path)
+    partial = path.with_name(f'{path.name}.{uuid.uuid4().hex}.partial')
+    try:
+        partial.write_bytes(data)
+        partial.replace(path)
+    except BaseException:
+        partial.unlink(missing_ok=True)
+        raise
 
 
 def checked(data: bytes, source: str, pinned: str) -> bytes:
